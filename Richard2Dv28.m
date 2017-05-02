@@ -1,203 +1,168 @@
 function [  ] = Richard2Dv28()
-% 2D Richards equation with constant boundary condition 
+% 2D Richards equation with Dirichlet/Neumann boundary condition 
 % H based Richards equation
 %
-% First edition: Weix 20/04/2017 
+% This is a self-contained DEMO function.
 %
-% point type N: normal (N is natural number)
+% Discretize method:  1st order Finite difference solution on space and time.
+% Nonlinear solution: Picards iteration.
+% Mesh: a CUSTOM defined (z,x) rectangle based mesh.
+% 
+% BC type    N: normal (N is natural number)
 %  		  	 0: Dirichlet BC
-%		  	 -N: Neuman BC 
+%		  	-N: Neuman BC 
 %
-% Version IV: 
-%
-% Version 1.40 : Weix 12/04/2017 
-% improve the flexibilities (for different BC and domain) by
-% introducing the indexMatrix and use 0 to indicate D-BC.
-% Version 1.50 : Weix 13/04/2017 
-% Vectorization
-% Version 2.70: 24/04/2017 
-% add Updata Neumann boundary condition. Update the way points are
-% accessed. (see Richard1Dv27 for more history)
-% Version 2.72: 25/04/2017 improve organization
-% Version 2.8: 02/05/2017 Use class definition to seperate code.
-%%
+% First edition: Weix 20/04/2017 
+% Version IV: missing
+% Version 1.40: Weix 12/04/2017 improve the flexibilities (for different BC and domain) by
+%                               introducing the indexMatrix and use 0 to indicate D-BC.
+% Version 1.50: Weix 13/04/2017 Vectorization
+% Version 2.70: Weix 24/04/2017 add Updata Neumann boundary condition. 
+%               Update the way  points are accessed. (see Richard1Dv27 for more history)
+% Version 2.72: Weix 25/04/2017 improve organization
+% Version 2.8:  Weix 02/05/2017 Use class definition to seperate code.
+%% Setup
 tic
-mesh=struct;
 % Spatial setup
-mesh.lengthZ=40;
-mesh.deltaZ=2;
-mesh.nZ=mesh.lengthZ/mesh.deltaZ+1;
+lengthZ=40;
+deltaZ=2;
+nZ=lengthZ/deltaZ+1;
 
-mesh.lengthX=40;
-mesh.deltaX=2;
-mesh.nX=mesh.lengthX/mesh.deltaX+1;
+lengthX=40;
+deltaX=2;
+nX=lengthX/deltaX+1;
 
 % Temporal setup
 lengthTime=300;
 deltaTime=1;
 nTime=lengthTime/deltaTime;
 
-% Iteration setup
+% Iteration solver setup
 nMaxIteration=1000;
 miniIteError=0.1;
 
-% Mesh
+
+%% Initialize mesh
 % [X,Z] = meshgrid(0:deltaX:lengthX,0:deltaZ:lengthZ);
-[mesh.Z,mesh.X] = ndgrid(0:mesh.deltaZ:mesh.lengthZ,0:mesh.deltaX:mesh.lengthX);
+[Z,X] = ndgrid(0:deltaZ:lengthZ,0:deltaX:lengthX);
 
-% Permeability field
-Ks=permeabilityField([mesh.Z(:),mesh.X(:)])*0.005;
-mesh.Ks=reshape(Ks,mesh.nZ,mesh.nX);
+mesh.lengthZ=lengthZ;
+mesh.deltaZ=deltaZ;
+mesh.nZ=nZ;
 
-%plot permeability field
-% pcolor(X,Z,Ks)
-% shading interp;
-% colormap jet;
+mesh.lengthX=lengthX;
+mesh.deltaX=deltaX;
+mesh.nX=nX;
 
-% Option 1       
-% Make nodeIndex matrix. It indicate the sequence nodes are accessed and the type of node.  
-%     mesh.nodeIndex=zeros(mesh.nZ,mesh.nX);
-%     mesh.nodeIndex(2:end-1,2:end-1)=reshape(uint32(1:(mesh.nZ-2)*(mesh.nX-2)), (mesh.nZ-2), (mesh.nX-2));    
-% 
-%     nodeInFieldIndex=find(mesh.nodeIndex);
-% 
-%     %%% 
-%     %initial state
-%     H_init=zeros(mesh.nZ,mesh.nX);
-%     H_init(2:end-1,2:end-1)=-61.5;
-% 
-%     %BC
-%     % bcLeft=ones(nNodeZ,1)*-20.7;
-%     % bcRight=ones(nNodeZ,1)*-61.5;
-%     % bcTop=ones(nNodeX,1)*-20.7;
-%     % bcBottom=ones(nNodeX,1)*-61.5;
-% 
-% 
-%         % A more interesting setup
-%         bcLeft=ones(mesh.nZ,1)*-20.7;
-%         bcRight=ones(mesh.nZ,1)*-20.7;
-%         bcTop=ones(mesh.nX,1)*-20.7;
-%         bcBottom=ones(mesh.nX,1)*-24.7;
-% 
-% 
-%     H_init(1,1:end)=bcTop;
-%     H_init(end,1:end)=bcBottom;
-% 
-%     H_init(1:end,1)=bcLeft;
-%     H_init(1:end,end)=bcRight;
+mesh.nodeIndex=zeros(nZ,nX);
 
-% Option 2 Neumann BC on left and right 
-    mesh.nodeIndex=zeros(mesh.nZ,mesh.nX);
-    mesh.nodeIndex(2:end-1,1:end)=reshape(uint32(1:(mesh.nZ-2)*(mesh.nX)), (mesh.nZ-2), (mesh.nX));  
+mesh.X=X;
+mesh.Z=Z;
+
+%%  Permeability field
+Ks=permeabilityField([Z(:),X(:)])*0.005;
+Ks=reshape(Ks,nZ,nX);
+mesh.Ks=Ks;
+
+%% DBC for top&bottom and NBC for left&right
+mesh.nodeIndex(2:end-1,1:end)=reshape(uint32(1:(nZ-2)*(nX)), (nZ-2), (nX));     
+nodeInFieldIndex=find(mesh.nodeIndex);
+
+mesh.nodeIndex(:,1)=-mesh.nodeIndex(:,1);         %munus value for NBC
+mesh.nodeIndex(:,end)=-mesh.nodeIndex(:,end);     %munus value for NBC
     
-    nodeInFieldIndex=find(mesh.nodeIndex);
 
-    mesh.nodeIndex(:,1)=-mesh.nodeIndex(:,1);
-    mesh.nodeIndex(:,end)=-mesh.nodeIndex(:,end);
-    
-    H_init=ones(mesh.nZ,mesh.nX)*-61.5;
-%     H_init(2:end-1,2:end-1)=-61.5;
-    H_init(1,1:end)=ones(mesh.nX,1)*-20.7;
-    H_init(end,1:end)=ones(mesh.nX,1)*-61.5;
+%% initial conditions and boundary value
+H_init=ones(nZ,nX)*-61.5;               %value for all initial points
 
-%% MAIN
+H_init(1,1:end)=ones(nX,1)*-20.7;       %value for top DBC
+H_init(end,1:end)=ones(nX,1)*-61.5;     %value for bottom DBC
+
+%% update mesh up to date to BC and initial condition
 mesh.nNode=length(mesh.nodeIndex(mesh.nodeIndex~=0));
 
+
+%% MAIN 
+% using picard iteration to solve Richards equation
 mesh.H=H_init;
+tic                         %set timer 
 for t=1:nTime
-      
-    previousH= mesh.H;
-    for k=1:nMaxIteration 
+
+    previousH= mesh.H;      %preserved for time discretize
+    for k=1:nMaxIteration   %Picards iteration
         
-        H0=mesh.H;
+        H0=mesh.H;          %preserved for iteration error measure
         
         [A,B] = PicardFdm(mesh,deltaTime,previousH);
         hFree=A\(-B);
-                
-%         H(find(nodeIndex))=hFree;       %pay extra attention to ordering
-        mesh.H(nodeInFieldIndex)=hFree; 
+        
+        mesh.H(nodeInFieldIndex)=hFree;   %update h(pressure head) 
+             %REMEMBER To pay extra attention to ordering when using other indexing order
+             % H(find(nodeIndex))=hFree;   
         
         sseIte=sum((mesh.H(:)-H0(:)).^2);
         if sqrt(sseIte)<miniIteError 
             break 
         end
         
-    end
+    end    
+    hRecord(:,:,t)=mesh.H;      %record h field time series
     
-    TheataRecord(:,:,t)=mesh.H;
-
 end
 
+computerTime=toc
 
-toc
-    
+%% Plot 
 figure(1)
-pcolor(mesh.X,mesh.Z,mesh.Ks)
-shading interp;
-colormap jet;
+    subplot(2,2,1)
+    pcolor(mesh.X,mesh.Z,mesh.Ks)
+    shading interp;
+    colormap jet;
+    title(sprintf('Permeability field'))
 
-%     figure(2)
-%     surf(X,Z,TheataRecord(:,:,end))
-%     shading interp;
-%     colormap jet;
-% 
-% 
-%     figure(3)
-%     surf(H_init);
-% 
-%     for t=1:nTime
-%         surf(X,Z,TheataRecord(:,:,t))
-%     %     shading interp;
-%         title(sprintf('time=%i',t))
-%         drawnow
-%         frame(t)=getframe;
-% 
-%     end
-% 
-% 
-%     figure(4)
-%     contour(X,Z,H_init)
-% 
-%     for t=1:nTime
-%         contour(X,Z,TheataRecord(:,:,t))
-%     %     shading interp;
-%         title(sprintf('time=%i',t))
-%         drawnow
-%         frame(t)=getframe;
-% 
-%     end
+    subplot(2,2,2)
+    pcolor(mesh.X,mesh.Z,hRecord(:,:,end))
+    shading interp;
+    colormap jet;
+    title(sprintf('End time pressure'))
 
+    for t=1:1:nTime
+        subplot(2,2,3)
+        contourf(mesh.X,mesh.Z,hRecord(:,:,t))
+%         colormap(hot)
+        shading interp;
+        colorbar
+    %     shading interp;
+        title(sprintf('pressure time=%i',t))
 
+        subplot(2,2,4)
+        contourf(mesh.X,mesh.Z,theataFunc(hRecord(:,:,t)))
+%         colormap(hot)
+        shading interp;
+        colorbar
+    %     shading interp;
 
-contour(mesh.X,mesh.Z,H_init)
+        title(sprintf('saturation time=%i',t))
+        drawnow
+        frame(t)=getframe;
 
-figure(5)
-for t=1:5:nTime
+    end
 
-    subplot(1,2,1)
-    contourf(mesh.X,mesh.Z,TheataRecord(:,:,t))
-    colormap(hot)
-    colorbar
-%     shading interp;
-    title(sprintf('pressure time=%i',t))
-    
-    subplot(1,2,2)
-    contourf(mesh.X,mesh.Z,theataFunc(TheataRecord(:,:,t)))
-    colormap(hot)
-    colorbar
-%     shading interp;
-    
-    title(sprintf('saturation time=%i',t))
-    drawnow
-    frame(t)=getframe;
+figure(2)
+    surf(H_init);
+    for t=1:nTime
+        surf(X,Z,hRecord(:,:,t))
+    %     shading interp;
+        title(sprintf('time=%i',t))
+        drawnow
+        frame(t)=getframe;
+
+    end
+
 
 end
 
-
-
-
-end 
-
+%% sub functions
  function [A,B] = PicardFdm(mesh,deltaTime,previousH)
  % Function used to discretize Richards equation FDM on time and space.
  % It accept Dirichlet BC (0) and homogeneous Neuman BC (miuns R).
@@ -429,7 +394,6 @@ r=4.74;
 
 result=ks.*rho./(rho+abs(H).^r);
 end
-
 
 
 

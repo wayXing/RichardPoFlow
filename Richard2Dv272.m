@@ -1,6 +1,8 @@
 function [  ] = Richard2Dv272()
-% 2D Richards equation with constant boundary condition 
+% 2D Richards equation with Dirichlet/Neumann boundary condition 
 % H based Richards equation
+%
+% This is a self-contained DEMO function.
 %
 % First edition: Weix 20/04/2017 
 %
