@@ -25,11 +25,11 @@ function [  ] = Richard2Dv28()
 tic
 % Spatial setup
 lengthZ=40;
-deltaZ=1;
+deltaZ=2;
 nZ=lengthZ/deltaZ+1;
 
 lengthX=40;
-deltaX=1;
+deltaX=2;
 nX=lengthX/deltaX+1;
 
 % Temporal setup
@@ -176,13 +176,13 @@ end
         A=speye(length(mesh.nNode));
         B=zeros(length(mesh.nNode),1);
         
-        tic
+%         tic
         C=theataDifFunc(mesh.H);
 %         K=kFunc(H);
         K=kFieldFunc(mesh.H,mesh.Ks);
-        nonlieanrTime=toc
+%         nonlieanrTime=toc
         
-        tic
+%         tic
         for iZ=1:mesh.nZ
             for iX=1:mesh.nX
             
@@ -306,7 +306,7 @@ end
                    
             end
         end
-        assembleTime=toc
+%         assembleTime=toc
 end
 
 
