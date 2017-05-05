@@ -21,8 +21,9 @@ function [  ] = Richard2Dv28()
 %               Update the way  points are accessed. (see Richard1Dv27 for more history)
 % Version 2.72: Weix 25/04/2017 improve organization
 % Version 2.8:  Weix 02/05/2017 Use class definition to seperate code.
-%% Setup
+%% 
 tic
+%% Setup
 % Spatial setup
 lengthZ=40;
 deltaZ=1;
