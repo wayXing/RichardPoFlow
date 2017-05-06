@@ -1,9 +1,8 @@
-function [] = Richard1dTest()
+function [] = Richard1d_Demo()
 % Richars equation 1D solver tester.
 % The function focus on fix Dirichlet BC.
-% This function serves as a test ground for all Richard solver developed in this
-% project. It is created to preserved all ideas involved and not for the
-% purpose of using.
+% This function serves as a Demo for all Richard solver developed in this
+% project.
 %
 % Input parameters:
 %
@@ -16,7 +15,7 @@ function [] = Richard1dTest()
 %
 % See also: 
 % Author:   Wei Xing
-% History:  03/05/2017  file created
+% History:  06/05/2017  file created
 %
 %% Parameter Initial 
 %     % Set standard initialization parameter
@@ -53,7 +52,7 @@ nTime=lengthTime/deltaTime;
 
 % Iteration solver setup
 nMaxIteration=1000;
-miniIteError=0.1;
+maxIteError=0.1;
 
 
 %% Initialize mesh
@@ -76,23 +75,20 @@ h_init=ones(nZ,1)*-61.5;               %value for all initial points
 h_init(1,1)=-20.7;       %value for top DBC
 h_init(end,1)=-61.5;     %value for bottom DBC
 
-
-dbcFlag=zeros(nZ,1);
+dbcFlag=zeros(nZ,1);     %specify DBC location
 dbcFlag(1)=1;
 dbcFlag(end)=1;
 
 %Auxiliary variable
 % P=diag(dbcFlag);
 
-dbcIndex=find(dbcFlag);
-nodeIndex=find(~dbcFlag);
+dbcIndex=find(dbcFlag);     %specify DBC index for later fitting in value
+nodeIndex=find(~dbcFlag);   %specify free node index
 
-nNode=sum(~dbcFlag);
+nNode=sum(~dbcFlag);        %number of free node
 
 
-%% Main
-
-imethod=3;
+%% Main 
 
 H=h_init;
 for t=1:nTime
@@ -105,16 +101,121 @@ for t=1:nTime
         
         C=theataDifFunc(H);
         K=kFunc(H);
+%         K=kFieldFunc(H,Ks);
         
-            %% Method I
-            %initialize
-            A=zeros(nNode);
-            B=zeros(nNode,1);
+        %Assemble Ax+B=0; Vectorized code.
+        centerDiag = (2.*K+ circshift(K,1)+circshift(K,-1))/(2*deltaZ^2)+C/deltaTime;  %A_center diagonal %first and last elements are meaningless                    
+        upDiag     = (K+ circshift(K,1))/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
+        downDiag   = (K+ circshift(K,-1))/(-2*deltaZ^2);                               %A_down   diagonal %first and last elements are meaningless 
 
-            %Assemble Ax+B=0;
+        Btemp      = (circshift(K,-1)-circshift(K,1))/(2*deltaZ)-H_PreviousTime.*C/deltaTime;
 
+        %make spare A                    
+        %Todo this part maybe improved using better sparse diag
+        Amethod=1;
+        switch Amethod 
+            case 1      %Very fast
+                Atemp=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
+            case 2
+                Atemp=sparse (diag(centerDiag,0) +circshift(diag(upDiag,0),[0,-1]) +circshift(diag(downDiag,0),[0,1]));       
+            otherwise 
+        end
+
+        %pick free node and componsate for dbc involved 
+        A=Atemp(nodeIndex,nodeIndex);
+        B=Btemp(nodeIndex)+Atemp(nodeIndex,dbcIndex)*H(dbcIndex);
+        
+        %solve linear equation
+        h=A\(-B);
+        H(nodeIndex)=h;
+        
+        %stopping criteria
+        sseIte=sum((H(:)-H0(:)).^2);
+        if sqrt(sseIte)<maxIteError 
+            break 
+        end
+
+    end
+        TheataRecord(:,:,t)=H;
+    
+end
+    
+    toc
+    
+    figure(1)
+    % plot(H_init);
+
+    for t=1:nTime
+        plot(TheataRecord(:,:,t))
+        title(sprintf('time=%i',t))
+        drawnow
+        frame(t)=getframe;
+
+    end
+
+  
+end
+
+
+%% 
+function picardSolve(H,deltaT,H0)
+
+
+    for k=1:nMaxIteration 
+    
+        H0=H;
+        
+        C=theataDifFunc(H);
+        K=kFunc(H);
+        sseIte=sum((H(:)-H0(:)).^2);
+        
+        
+        centerDiag = (2.*K+ circshift(K,1)+circshift(K,-1))/(2*deltaZ^2)+C/deltaTime;  %A_center diagonal %first and last elements are meaningless                    
+        upDiag     = (K+ circshift(K,1))/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
+        downDiag   = (K+ circshift(K,-1))/(-2*deltaZ^2);                               %A_down   diagonal %first and last elements are meaningless 
+
+        Btemp      = (circshift(K,-1)-circshift(K,1))/(2*deltaZ)-H_PreviousTime.*C/deltaTime;
+
+        %make spare A                    
+        %Todo this part maybe improved using better sparse diag
+        Amethod=1;
+        switch Amethod 
+            case 1      %Very fast
+                Atemp=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
+            case 2
+                Atemp=sparse (diag(centerDiag,0) +circshift(diag(upDiag,0),[0,-1]) +circshift(diag(downDiag,0),[0,1]));       
+            otherwise 
+        end
+
+        %pick free node and componsate for dbc involved 
+        A=Atemp(nodeIndex,nodeIndex);
+        B=Btemp(nodeIndex)+Atemp(nodeIndex,dbcIndex)*H(dbcIndex);
+             
+
+        h=A\(-B);
+        
+       
+        
+        if sqrt(sseIte)<miniIteError 
+            break 
+        end
+        
+    end
+
+
+
+
+
+ 
+            
+end
+
+
+
+   function picardAbForm()
+            imethod=3;
             switch imethod 
-                case 1 
+                case 1      %simple, easy to understand but slow program
                     
                     indexMatrix=zeros(nZ,1);
                     indexMatrix(2:end-1)=1:nZ-2;                
@@ -150,7 +251,6 @@ for t=1:nTime
                             b=b+wDown*H(j+1,i);
                         end
 
-
                         if indexUp>0 A(indexCenter,indexUp)=wUp; end
                         if indexDown>0 A(indexCenter,indexDown)=wDown; end
 
@@ -159,240 +259,50 @@ for t=1:nTime
 
                     end
                     
-                case 2          %% Method II semi-Vectorize code                                                  
+                case 2         %% Method II semi-Vectorize code (prepare for Method III)        
+                    
                     Atemp=zeros(nZ);
                     Btemp=zeros(nZ,1);
 %                     nZ=nNode;
 
                     for i=2:nZ-1    % for all non-boundary points
-
                        Atemp(i,i)   = (2*K(i)+ K(i-1)+K(i+1))/(2*deltaZ^2)+C(i)/deltaTime;
                        Atemp(i,i-1) = (K(i)+ K(i-1))/(-2*deltaZ^2);
                        Atemp(i,i+1) = (K(i)+ K(i+1))/(-2*deltaZ^2); 
                        Btemp(i)     = (K(i+1)-K(i-1))/(2*deltaZ)-H_PreviousTime(i)*C(i)/deltaTime;
 
                     end
-                    
+
                     A=Atemp(nodeIndex,nodeIndex);
                     B=Btemp(nodeIndex)+Atemp(nodeIndex,dbcIndex)*H(dbcIndex);
                     
-          
-                case 3     %% Method II semi-Vectorize code (prepare for Method III)         
+                case 3      %% Method III Vectorize code    
                     
-                    Ac = (2.*K+ circshift(K,1)+circshift(K,-1))/(2*deltaZ^2)+C/deltaTime;   %first and last elements are meaningless                    
-%                         Ac([1,end])=[0;0];      %make explicit for first and last elements to be meaningless. This line is NOT necessary for the code to run.   
-
-                    Au = (K+ circshift(K,1))/(-2*deltaZ^2);                         
-%                         Au([end,end-1])=[0;0];      %make explicit for first and last elements to be meaningless. This line is NOT necessary for the code to run.       
-                    
-                    Ad = (K+ circshift(K,-1))/(-2*deltaZ^2);                            
-%                         Ad([1,2])=[0;0];      %make explicit for first and last elements to be meaningless. This line is NOT necessary for the code to run. 
+                    centerDiag = (2.*K+ circshift(K,1)+circshift(K,-1))/(2*deltaZ^2)+C/deltaTime;  %A_center diagonal %first and last elements are meaningless                    
+                    upDiag     = (K+ circshift(K,1))/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
+                    downDiag   = (K+ circshift(K,-1))/(-2*deltaZ^2);                               %A_down   diagonal %first and last elements are meaningless 
                         
-                    Btemp  = (circshift(K,-1)-circshift(K,1))/(2*deltaZ)-H_PreviousTime.*C/deltaTime;
-                                                                       
+                    Btemp      = (circshift(K,-1)-circshift(K,1))/(2*deltaZ)-H_PreviousTime.*C/deltaTime;
+                                      
                     %make spare A                    
-                    %Todo this part should be improve by directly creat
-                    %sparse band matrix.
-                    
+                    %Todo this part maybe improved using better sparse diag
                     Amethod=1;
                     switch Amethod 
                         case 1      %Very fast
-                            Atemp=spdiags(Ac,0,nZ,nZ) +circshift(spdiags(Au,0,nZ,nZ),[0,-1]) +circshift(spdiags(Ad,0,nZ,nZ),[0,1]);                                          
+                            Atemp=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
                         case 2
-                            Atemp=sparse (diag(Ac,0) +circshift(diag(Au,0),[0,-1]) +circshift(diag(Ad,0),[0,1]));       
+                            Atemp=sparse (diag(centerDiag,0) +circshift(diag(upDiag,0),[0,-1]) +circshift(diag(downDiag,0),[0,1]));       
                         otherwise 
-%                       % Try(1)    Fail
-%                         Atemp=spdiags(Ac,0) +circshift(spdiags(Au,0),[0,-1]) +circshift(spdiags(Ad,0),[0,1]);
-%                       % Try(2)    Fail  
-%                         Atemp=speye(nZ)*Ac +circshift(speye(nZ)*Au,[0,-1]) +circshift(speye(nZ)*Ad,[0,1]);
                     end
-                                                
-%                     diagAu=circshift(diag(Au,0),[0,-1]);
-             
-                        %Todo this part should be improve by directly creat
-                        %sparse band matrix.
-                        %real sparse
-
-%                       % Try(3)    Work & time saving  
-                                     
-                    %select free node
+                                                                        
+                    %pick free node and componsate for dbc involved 
                     A=Atemp(nodeIndex,nodeIndex);
                     B=Btemp(nodeIndex)+Atemp(nodeIndex,dbcIndex)*H(dbcIndex);
-                    
-                    
+             
                 otherwise 
                     error('no such method')
             end
- 
-%         %trime for BC
-%         indexIfKnown=~any(A);
-%         indexIfUnknown=any(A);
-% 
-%         A=A(indexIfUnknown,indexIfUnknown);
-%         B=B(indexIfUnknown);
-
-
-        h=A\(-B);
-%         H(2:end-1)=h;
-        H(nodeIndex)=h;
-    
-        
-        sseIte=sum((H(:)-H0(:)).^2);
-        if sqrt(sseIte)<miniIteError 
-            break 
-        end
-        
     end
-    TheataRecord(:,:,t)=H;
-    
-end
-    
-    toc
-    
-    figure(1)
-    % plot(H_init);
-
-    for t=1:nTime
-        plot(TheataRecord(:,:,t))
-        title(sprintf('time=%i',t))
-        drawnow
-        frame(t)=getframe;
-
-    end
-
-  
-end
-
-
-%% 
-function D=vec2dig(v,D,i)
-% add vector to a (sparse) diagal matrix at i diagonal 
-% size(v,1) must equal to size(D,1). 
-
-    Dc=diag(v);
-    
-
-
-
-
-end
-
-
-
-
-
-function [A2,b2]=Picard_v1(H,H_PreviousTime,deltaT,K,C,nZ)
-
-    A=zeros(nZ);
-    b=zeros(nZ,1);
-    
-    for i=2:nZ-1    % for all non-boundary points
-        
-%        w_center(i)= (2*K(i)+ K(i-1)+K(i+1))/(4*deltaZ^2)+C(i)/deltaT;
-%        w_up(i)    = (K(i)+ K(i-1))/(-2*deltaZ^2);
-%        w_down(i)  = (K(i)+ K(i+1))/(-2*deltaZ^2); 
-%        b(i)       = (K(i+1)-K(i-1))/(2*deltaZ);
-       
-       A(i,i)  = (2*K(i)+ K(i-1)+K(i+1))/(4*deltaZ^2)+C(i)/deltaT;
-       A(i,i-1)  = (K(i)+ K(i-1))/(-2*deltaZ^2);
-       A(i,i+1)  = (K(i)+ K(i+1))/(-2*deltaZ^2); 
-       b(i)       = (K(i+1)-K(i-1))/(2*deltaZ);
-       
-    end
-
-    dbcFlag=zeros(nZ);
-    dbcFlag(1)=1;
-    dbcFlag(end)=1;
-    
-    P=diag(dbcFlag);
-    
-    
-    dbcIndex=find(dbcFlag);
-    nodeIndex=~dbcIndex;
-    
-    A2=A(nodeIndex,nodeIndex);
-    b2=b(nodeIndex)-A(nodeIndex,dbcIndex)*H(dbcIndex);
-
-
-end
-
-
-
-
-
-
-
-
-function [A,B]=axbPicard(H,H_PreviousTime,K,C)
-%% Assemble Ax+B=0 with New Vectorization 
-% H,K,C are value at all grid point (in order to calculate coifficients)
-% size (A) ~= size(H);
-%         H0=H;
-    H_all(2:end-1,2:end-1)=H;
-
-    C_all=theataDifFunc(H_all);
-    C=C_all(2:end-1,2:end-1);
-
-    K_all=kFunc(H_all);
-    K=K_all(2:end-1,2:end-1);
-
-    zdiffK_all=diff(K_all,1,1);
-    xdiffK_all=diff(K_all,1,2);
-
-    wUp   = -1./deltaZ^2 .* (K - zdiffK_all(1:end-1,2:end-1)./2);
-    wDown = -1./deltaZ^2 .* (K + zdiffK_all(2:end,  2:end-1)./2);
-
-    wLeft = -1./deltaX^2 .* (K - xdiffK_all(2:end-1,1:end-1)./2);
-    wRight= -1./deltaX^2 .* (K + xdiffK_all(2:end-1,2:end)./2);
-
-    wCenter=C./deltaTime-wUp-wDown-wLeft-wRight;
-
-    b= (zdiffK_all(2:end, 2:end-1)+ zdiffK_all(1:end-1,2:end-1))./2 ./deltaZ ...
-       -H_PreviousTime .* C ./ deltaTime;
-
-    %update BC neighbour influence to Ax+B=0              
-    B= b(:) + wUp(:)   .*topDbcValue...
-            + wDown(:) .*bottomDbcValue...
-            + wLeft(:) .*leftDbcValue...
-            + wRight(:).*rightDbcValue;    
-
-    wUp    = wUp(:)   .* (topDbcValue==0); 
-    wDown  = wDown(:) .* (bottomDbcValue==0); 
-    wLeft  = wLeft(:) .* (leftDbcValue==0); 
-    wRight = wRight(:).* (rightDbcValue==0); 
-    wCenter=wCenter(:);
-
-    %Way I. heavy time cost. Not sparse
-%         A=  diag(wUp(2:end),1)+diag(wDown(1:end-1),-1)...
-%             +diag(wLeft(nNodeZ+1:end),-nNodeZ)+diag(wRight(1:end-nNodeZ),nNodeZ)...       
-%             +diag(wCenter,0);
-
-    %Way II.
-    band=zeros(nNodeZ*nNodeX,5);
-    band(1:end-nNodeZ,1)= wLeft(nNodeZ+1:end);
-    band(1:end-1,2)= wDown(1:end-1);
-    band(:,3)= wCenter;
-    band(1+1:end,4)= wUp(1+1:end);
-    band(1+nNodeZ:end,5)= wRight(1:end-nNodeZ);
-
-    A = spdiags(band,[-nNodeZ,-1,0,1,nNodeZ],nNodeZ*nNodeX,nNodeZ*nNodeX);
-
-end
-    
-  
-function [A,b]=RichardsPicard(h0,hPreviousTime,deltaT,K,C)
-
-        H_all(2:end-1,2:end-1)=H; 
-        C_all=theataDifFunc(H_all);
-    
-
-end
-
-
-
-
-
-
 
 %%
 function theata=theataFunc(h)
