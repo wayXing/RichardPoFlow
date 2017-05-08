@@ -1,8 +1,9 @@
-function [] = Richard1d_Demo2()
+function [] = Richard1d_Demo3()
 % Richars equation 1D solver tester.
 % The function focus on fix Dirichlet BC.
 % This function serves as a Demo for all Richard solver developed in this
 % project.
+% Demo3: use shirft matrix operation to formulate function of ax=b;
 %
 % Input parameters:
 %
@@ -41,7 +42,7 @@ function [] = Richard1d_Demo2()
 tic
 %% Setup
 % Spatial setup
-lengthZ=40000;
+lengthZ=10000;
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
@@ -125,17 +126,18 @@ function mesh=picardUpdate(mesh,deltaT,nMaxIteration,maxIteError)
     for k=1:nMaxIteration 
         H0=mesh.H;  %preserved for iteration compare
         
-        [A,B]=picardAxbForm(mesh,previousH,deltaT);
+        %update mesh value 
+        mesh.C=theataDifFunc(mesh.H);
+        mesh.K=kFunc(mesh.H);
+        
+        [A,B]=picardAxbForm2(mesh,previousH,deltaT);
         %solve linear equation
         h=A\(B);
         
         %update mesh value
         nodeIndex=find(~mesh.dbcFlag);   %specify free node index   
         mesh.H(nodeIndex)=h;
-        
-        mesh.C=theataDifFunc(mesh.H);
-        mesh.K=kFunc(mesh.H);
-        
+         
         %stopping criteria
         sseIte=sum((mesh.H(:)-H0(:)).^2);
         if sqrt(sseIte)<maxIteError 
@@ -149,6 +151,9 @@ end
 
 function [A,B]=picardAxbForm(mesh,previousH,deltaT)
 %calculate linear system equation Ax=B of free node.
+% This function is probabilly the fastest as not auxiliary shirft
+% matrix/Picking up matrix is formed explicitly. All done by matrix
+% indexing and circshirft
 
     % Auxiliary variable   
     dbcIndex=find(mesh.dbcFlag);     %specify DBC index for later fitting in value
@@ -175,7 +180,7 @@ function [A,B]=picardAxbForm(mesh,previousH,deltaT)
 
     %make spare A                    
     %Todo this part may be improved using better sparse diag
-    Amethod=2;
+    Amethod=1;
     switch Amethod 
         case 1      %Very fast
             A_all=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
@@ -190,6 +195,86 @@ function [A,B]=picardAxbForm(mesh,previousH,deltaT)
     A=A_all(nodeIndex,nodeIndex);
 
 end
+
+
+%% POD picardAxbForm
+function [A,B]=picardAxbForm2(mesh,previousH,deltaT)
+%calculate linear system equation Ax=B of free node with shirft matrix
+
+    % Auxiliary variable   
+    dbcIndex=find(mesh.dbcFlag);     %specify DBC index for later fitting in value
+    nodeIndex=find(~mesh.dbcFlag);   %specify free node index
+    nNode=sum(~mesh.dbcFlag);        %number of free node   
+
+    deltaZ=mesh.deltaZ;
+    nZ=mesh.nZ;
+   
+    C=mesh.C;
+    K=mesh.K;
+    
+    % P=diag(dbcFlag);
+    % P=spdiags(dbcFlag,0,nZ,nZ)
+    
+    % Calculation
+    
+    Amethod=1;
+    switch Amethod
+        case 1  %vary fast
+            UpShift1Eye =circshift(speye(nZ),[-1,0]);
+            lowShift1Eye=circshift(speye(nZ),[1,0]);
+        case 2  %fast              
+            UpShift1Eye =circshift(spdiags(ones(nZ,1),0,nZ,nZ),[-1,0]);
+            lowShift1Eye=circshift(spdiags(ones(nZ,1),0,nZ,nZ),[1,0]);
+        case 3  %DONT use 
+        % If sparse matrix is not adopted. later calculation would be slow!
+%             UpShirft1Eye=spdiags(ones(nZ),0,nZ,nZ);
+            UpShift1Eye=diag(ones(nZ,1));                  %spdiags and diag takes similar time but different memory 
+            UpShift1Eye=circshift(UpShift1Eye,[-1,0]);    %circshift is quick and use almost no time 
+            lowShift1Eye=diag(ones(nZ,1));
+            lowShift1Eye=circshift(lowShift1Eye,[1,0]);
+    end
+    
+%     K=kFieldFunc(mesh.H,mesh.Ks);
+     
+    centerDiag = (2.*K+ lowShift1Eye*K+UpShift1Eye*K)/(2*deltaZ^2)+C/deltaT;       %A_center diagonal %first and last elements are meaningless                    
+    upDiag     = (K+ lowShift1Eye*K)/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
+    downDiag   = (K+ UpShift1Eye*K)/(-2*deltaZ^2);                                 %A_down   diagonal %first and last elements are meaningless     
+    
+    %rewrite 3 diagonal band
+    
+    centerDiag = (2+lowShift1Eye+UpShift1Eye)./(2*deltaZ^2)*K+C/deltaT;
+         
+    upDiag     = (K+ lowShift1Eye*K)/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
+    downDiag   = (K+ UpShift1Eye*K)/(-2*deltaZ^2);                                 %A_down   diagonal %first and last elements are meaningless         
+    
+    
+
+    B          = -(UpShift1Eye*K-lowShift1Eye*K)/(2*deltaZ)+previousH.*C/deltaT;
+
+    %make spare metrix A                    
+    %Todo this part may be improved using better sparse diag
+    Amethod=4;
+    switch Amethod 
+        case 1      %Very fast
+            A_all=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
+        case 2      %Slow. Always NOT creat full matrix and then sparse it.
+            A_all=sparse (diag(centerDiag,0) +circshift(diag(upDiag,0),[0,-1]) +circshift(diag(downDiag,0),[0,1]));   
+        case 3      %not necessary but show a clear formulation
+            left1Eye=circshift(spdiags(ones(nZ),0,nZ,nZ),[0,-1]);
+            right1Eye=circshift(spdiags(ones(nZ),0,nZ,nZ),[0,1]);
+            A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*left1Eye + spdiags(downDiag,0,nZ,nZ)*right1Eye;   
+        case 4
+            A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*lowShift1Eye + spdiags(downDiag,0,nZ,nZ)*UpShift1Eye;  
+        otherwise 
+    end
+
+    %pick free node and componsate for dbc involved 
+
+    B=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);
+    A=A_all(nodeIndex,nodeIndex);
+
+end
+
 
 
 

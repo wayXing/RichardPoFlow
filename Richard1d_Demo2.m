@@ -3,6 +3,7 @@ function [] = Richard1d_Demo2()
 % The function focus on fix Dirichlet BC.
 % This function serves as a Demo for all Richard solver developed in this
 % project.
+% Demo2: vectorize formulate function of ax=b;
 %
 % Input parameters:
 %
@@ -41,7 +42,7 @@ function [] = Richard1d_Demo2()
 tic
 %% Setup
 % Spatial setup
-lengthZ=40;
+lengthZ=100000;
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
@@ -67,7 +68,7 @@ mesh.nZ=nZ;
 scale=0.005;        % overall magnitude of the permeability field. decide the changing speed.
 lengthcale=10;     %larger number means less stochastic (more correlation as one zooms in the 
                     %field) field. Thus gives smoother result.
-mesh.Ks=permeabilityField([Z(:)],lengthcale)*scale;
+% mesh.Ks=permeabilityField([Z(:)],lengthcale)*scale;
 
 
 %% initial conditions and boundary value (DBC)
@@ -89,8 +90,12 @@ nNode=sum(~mesh.dbcFlag);        %number of free node
 
 
 %% Main 
-
 mesh.H=h_init;
+
+mesh.C=theataDifFunc(mesh.H);
+mesh.K=kFunc(mesh.H);
+
+
 for t=1:nTime
     
     mesh=picardUpdate(mesh,deltaT,nMaxIteration,maxIteError);   
@@ -121,6 +126,10 @@ function mesh=picardUpdate(mesh,deltaT,nMaxIteration,maxIteError)
     for k=1:nMaxIteration 
         H0=mesh.H;  %preserved for iteration compare
         
+        %update mesh value 
+        mesh.C=theataDifFunc(mesh.H);
+        mesh.K=kFunc(mesh.H);
+        
         [A,B]=picardAxbForm(mesh,previousH,deltaT);
         %solve linear equation
         h=A\(B);
@@ -128,7 +137,7 @@ function mesh=picardUpdate(mesh,deltaT,nMaxIteration,maxIteError)
         %update mesh value
         nodeIndex=find(~mesh.dbcFlag);   %specify free node index   
         mesh.H(nodeIndex)=h;
-        
+         
         %stopping criteria
         sseIte=sum((mesh.H(:)-H0(:)).^2);
         if sqrt(sseIte)<maxIteError 
@@ -152,8 +161,12 @@ function [A,B]=picardAxbForm(mesh,previousH,deltaT)
     nZ=mesh.nZ;
 
     %main
-    C=theataDifFunc(mesh.H);
-    K=kFunc(mesh.H);
+%     C=theataDifFunc(mesh.H);
+%     K=kFunc(mesh.H);
+    
+    C=mesh.C;
+    K=mesh.K;
+    
 %     K=kFieldFunc(mesh.H,mesh.Ks);
 
     centerDiag = (2.*K+ circshift(K,1)+circshift(K,-1))/(2*deltaZ^2)+C/deltaT;  %A_center diagonal %first and last elements are meaningless                    
@@ -163,7 +176,7 @@ function [A,B]=picardAxbForm(mesh,previousH,deltaT)
     B          = -(circshift(K,-1)-circshift(K,1))/(2*deltaZ)+previousH.*C/deltaT;
 
     %make spare A                    
-    %Todo this part maybe improved using better sparse diag
+    %Todo this part may be improved using better sparse diag
     Amethod=1;
     switch Amethod 
         case 1      %Very fast
@@ -179,6 +192,53 @@ function [A,B]=picardAxbForm(mesh,previousH,deltaT)
     A=A_all(nodeIndex,nodeIndex);
 
 end
+
+
+%% POD picardAxbForm
+function [A,B]=picardAxbFormPOD(mesh,previousH,deltaT,vK,vC)
+%calculate linear system equation Ax=B of free node with DEIM basis
+
+    % Auxiliary variable   
+    dbcIndex=find(mesh.dbcFlag);     %specify DBC index for later fitting in value
+    nodeIndex=find(~mesh.dbcFlag);   %specify free node index
+    nNode=sum(~mesh.dbcFlag);        %number of free node   
+
+    deltaZ=mesh.deltaZ;
+    nZ=mesh.nZ;
+
+    %main
+%     C=theataDifFunc(mesh.H);
+%     K=kFunc(mesh.H);
+    
+    C=mesh.C;
+    K=mesh.K;
+    
+%     K=kFieldFunc(mesh.H,mesh.Ks);
+
+    centerDiag = (2.*K+ circshift(K,1)+circshift(K,-1))/(2*deltaZ^2)+C/deltaT;  %A_center diagonal %first and last elements are meaningless                    
+    upDiag     = (K+ circshift(K,1))/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
+    downDiag   = (K+ circshift(K,-1))/(-2*deltaZ^2);                               %A_down   diagonal %first and last elements are meaningless 
+
+    B          = -(circshift(K,-1)-circshift(K,1))/(2*deltaZ)+previousH.*C/deltaT;
+
+    %make spare A                    
+    %Todo this part may be improved using better sparse diag
+    Amethod=1;
+    switch Amethod 
+        case 1      %Very fast
+            A_all=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
+        case 2
+            A_all=sparse (diag(centerDiag,0) +circshift(diag(upDiag,0),[0,-1]) +circshift(diag(downDiag,0),[0,1]));       
+        otherwise 
+    end
+
+    %pick free node and componsate for dbc involved 
+
+    B=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);
+    A=A_all(nodeIndex,nodeIndex);
+
+end
+
 
 
 
@@ -202,8 +262,8 @@ function mesh=picardUpdate2(mesh,deltaT,nMaxIteration,maxIteError)
         H0=mesh.H;  %preserved for iteration compare
                 
         C=theataDifFunc(mesh.H);
-%         K=kFunc(mesh.H);
-        K=kFieldFunc(mesh.H,mesh.Ks);
+        K=kFunc(mesh.H);
+%         K=kFieldFunc(mesh.H,mesh.Ks);
 
         centerDiag = (2.*K+ circshift(K,1)+circshift(K,-1))/(2*deltaZ^2)+C/deltaT;  %A_center diagonal %first and last elements are meaningless                    
         upDiag     = (K+ circshift(K,1))/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  

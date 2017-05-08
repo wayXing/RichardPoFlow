@@ -3,6 +3,7 @@ function [] = Richard1d_Demo()
 % The function focus on fix Dirichlet BC.
 % This function serves as a Demo for all Richard solver developed in this
 % project.
+% Demo: demonstrate all formulate function of ax=b;
 %
 % Input parameters:
 %
