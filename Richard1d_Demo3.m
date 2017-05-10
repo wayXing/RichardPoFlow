@@ -42,7 +42,7 @@ function [] = Richard1d_Demo3()
 tic
 %% Setup
 % Spatial setup
-lengthZ=100;
+lengthZ=10000;
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
@@ -197,7 +197,7 @@ function [A,B]=picardAxbForm(mesh,previousH,deltaT)
 end
 
 
-%% POD picardAxbForm
+% POD picardAxbForm
 function [A,B]=picardAxbForm2(mesh,previousH,deltaT)
 %calculate linear system equation Ax=B of free node with shirft matrix
 
@@ -256,13 +256,13 @@ function [A,B]=picardAxbForm2(mesh,previousH,deltaT)
 
     %make spare metrix A                    
     %Todo this part may be improved using better sparse diag
-    Amethod=5;
+    Amethod=4;
     switch Amethod 
         case 1      %Very fast
             A_all=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
         case 2      %Slow. Always NOT creat full matrix and then sparse it.
             A_all=sparse (diag(centerDiag,0) +circshift(diag(upDiag,0),[0,-1]) +circshift(diag(downDiag,0),[0,1]));   
-        case 3      %not necessary but show a clear formulation
+        case 3      %not necessary but show a more clear formulation
             left1Eye=circshift(spdiags(ones(nZ),0,nZ,nZ),[0,-1]);
             right1Eye=circshift(spdiags(ones(nZ),0,nZ,nZ),[0,1]);
             A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*left1Eye + spdiags(downDiag,0,nZ,nZ)*right1Eye;   

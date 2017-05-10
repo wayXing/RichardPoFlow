@@ -1,8 +1,9 @@
-function [] = Richard1d_Demo2()
+function [] = Richard1dPod_Proto1()
 % Richars equation 1D solver tester.
 % The function focus on fix Dirichlet BC.
 % This function serves as a Demo for all Richard solver developed in this
 % project.
+% Proto1: created from Richard1d_Demo3() show experiment 1d POD method.
 %
 % Input parameters:
 %
@@ -15,33 +16,12 @@ function [] = Richard1d_Demo2()
 %
 % See also: 
 % Author:   Wei Xing
-% History:  06/05/2017  file created
+% History:  09/05/2017  file created
 %
-%% Parameter Initial 
-%     % Set standard initialization parameter
-%        InitOptStandard = [0.2, 0.25, 0];
-%        % InitRand = 0.3 (use normal random inoculation with 30% of domain of variables),
-%        % InitNindKeep = 0.2 (keep 20% maximal)
-%        % InitNindUniform = 0 (create no random individuals)
-%     % Check input parameters
-%        % At least the first 2 input parameters are necessary
-%        if nargin < 2,  error('Not enough input parameters (at least 2 parameters - individuals and Nind)'); end
-%        if isnan(PopInit), PopInit = []; end
-%        % The 3. input parameter is optional, default is []
-%        if nargin < 3,  VLUB = []; end
-%     % the 4. input parameter is optional and can contain multiple options
-%        if nargin < 4, InitOpt = []; end
-%        if isnan(InitOpt), InitOpt = []; end
-%        % When too many options are contained in InitOpt, issue a warning and 
-%        % shorten the parameter vector
-%        if length(InitOpt) > length(InitOptStandard), 
-%           InitOpt = InitOpt(1:length(InitOptStandard)); 
-%           warning(' Too many parameters in InitOpt! InitOpt was shortened.');
-%        end
 tic
 %% Setup
 % Spatial setup
-lengthZ=40000;
+lengthZ=1000;
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
@@ -88,29 +68,62 @@ nodeIndex=find(~mesh.dbcFlag);   %specify free node index
 nNode=sum(~mesh.dbcFlag);        %number of free node
 
 
-%% Main 
+%% FOM
 mesh.H=h_init;
-
 mesh.C=theataDifFunc(mesh.H);
 mesh.K=kFunc(mesh.H);
 
-
+tic
 for t=1:nTime
     
     mesh=picardUpdate(mesh,deltaT,nMaxIteration,maxIteError);   
-    TheataRecord(:,:,t)=mesh.H;
+    TheataRecord(:,t)=mesh.H;
     
 end
+fomTimeCostFom=toc  
 
-toc  
-% figure(1)
-% for t=1:nTime
-%     plot(TheataRecord(:,:,t))
-%     title(sprintf('time=%i',t))
-%     drawnow
-%     frame(t)=getframe;
-% 
-% end
+
+%% POD
+podEnergy=0.999;
+
+[U,S,V]=svd(TheataRecord,'econ');
+% [U,S,V]=svd(H);
+energy=diag(S);
+cumulatedEnergy= cumsum(energy)./sum(energy);
+[~,nPOD]=min(abs(cumulatedEnergy-podEnergy))
+
+podBasis=U(:,1:nPOD);
+
+
+%% Naive ROM
+mesh.H=h_init;
+mesh.C=theataDifFunc(mesh.H);
+mesh.K=kFunc(mesh.H);
+
+tic
+for t=1:nTime
+    
+    mesh=picardPodUpdate(mesh,deltaT,nMaxIteration,maxIteError,podBasis);   
+    TheataRecord2(:,t)=mesh.H;
+    
+end
+podTimeCostFom=toc  
+
+
+
+% Plot
+figure(1)
+for t=1:nTime
+    plot(TheataRecord(:,t))
+    hold on 
+    plot(TheataRecord2(:,t))
+    hold off
+    title(sprintf('time=%i',t))
+    drawnow
+    frame(t)=getframe;
+
+end
+
 
   
 end
@@ -125,17 +138,18 @@ function mesh=picardUpdate(mesh,deltaT,nMaxIteration,maxIteError)
     for k=1:nMaxIteration 
         H0=mesh.H;  %preserved for iteration compare
         
-        [A,B]=picardAxbForm(mesh,previousH,deltaT);
+        %update mesh value 
+        mesh.C=theataDifFunc(mesh.H);
+        mesh.K=kFunc(mesh.H);
+        
+        [A,B]=picardAxbForm2(mesh,previousH,deltaT);
         %solve linear equation
         h=A\(B);
         
         %update mesh value
         nodeIndex=find(~mesh.dbcFlag);   %specify free node index   
         mesh.H(nodeIndex)=h;
-        
-        mesh.C=theataDifFunc(mesh.H);
-        mesh.K=kFunc(mesh.H);
-        
+         
         %stopping criteria
         sseIte=sum((mesh.H(:)-H0(:)).^2);
         if sqrt(sseIte)<maxIteError 
@@ -143,12 +157,59 @@ function mesh=picardUpdate(mesh,deltaT,nMaxIteration,maxIteError)
         end
         
     end
-
-
 end
 
+function mesh=picardPodUpdate(mesh,deltaT,nMaxIteration,maxIteError,V)
+%update mesh value using Picards iteration
+
+nodeIndex=find(~mesh.dbcFlag);   %specify free node index  
+
+    previousH=mesh.H;   
+    %main   
+    for k=1:nMaxIteration 
+        H0=mesh.H;  %preserved for iteration compare
+        
+        %update mesh value 
+        mesh.C=theataDifFunc(mesh.H);
+        mesh.K=kFunc(mesh.H);
+        
+        [A,B]=picardAxbForm2(mesh,previousH,deltaT);
+        
+        %POD decompose
+        Ar=V(nodeIndex,:)'*A*V(nodeIndex,:);
+        Br=V(nodeIndex,:)'*B;
+        
+        %solve linear equation
+        hr=Ar\(Br);
+        
+        %reassemble
+        h=V(nodeIndex,:)*hr;
+        
+        %update mesh value
+         
+        mesh.H(nodeIndex)=h;
+         
+        %stopping criteria
+        sseIte=sum((mesh.H(:)-H0(:)).^2);
+        if sqrt(sseIte)<maxIteError 
+            break 
+        end
+        
+    end
+end
+
+
+
+
+
+
+
+%%
 function [A,B]=picardAxbForm(mesh,previousH,deltaT)
 %calculate linear system equation Ax=B of free node.
+% This function is probabilly the fastest as not auxiliary shirft
+% matrix/Picking up matrix is formed explicitly. All done by matrix
+% indexing and circshirft
 
     % Auxiliary variable   
     dbcIndex=find(mesh.dbcFlag);     %specify DBC index for later fitting in value
@@ -175,7 +236,7 @@ function [A,B]=picardAxbForm(mesh,previousH,deltaT)
 
     %make spare A                    
     %Todo this part may be improved using better sparse diag
-    Amethod=2;
+    Amethod=1;
     switch Amethod 
         case 1      %Very fast
             A_all=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
@@ -190,6 +251,143 @@ function [A,B]=picardAxbForm(mesh,previousH,deltaT)
     A=A_all(nodeIndex,nodeIndex);
 
 end
+
+%%
+% POD picardAxbForm
+function [A,B]=picardAxbForm2(mesh,previousH,deltaT)
+%calculate linear system equation Ax=B of free node with shirft matrix
+
+    % Auxiliary variable   
+    dbcIndex=find(mesh.dbcFlag);     %specify DBC index for later fitting in value
+    nodeIndex=find(~mesh.dbcFlag);   %specify free node index
+    nNode=sum(~mesh.dbcFlag);        %number of free node   
+
+    deltaZ=mesh.deltaZ;
+    nZ=mesh.nZ;
+   
+    C=mesh.C;
+    K=mesh.K;
+    
+    % P=diag(dbcFlag);
+    % P=spdiags(dbcFlag,0,nZ,nZ)
+    
+    % Calculation
+    
+    Amethod=1;
+    switch Amethod
+        case 1  %vary fast
+            UpShift1Eye =circshift(speye(nZ),[-1,0]);
+            lowShift1Eye=circshift(speye(nZ),[1,0]);
+        case 2  %fast              
+            UpShift1Eye =circshift(spdiags(ones(nZ,1),0,nZ,nZ),[-1,0]);
+            lowShift1Eye=circshift(spdiags(ones(nZ,1),0,nZ,nZ),[1,0]);
+        case 3  %DONT use 
+        % If sparse matrix is not adopted. later calculation would be slow!
+%             UpShirft1Eye=spdiags(ones(nZ),0,nZ,nZ);
+            UpShift1Eye=diag(ones(nZ,1));                  %spdiags and diag takes similar time but different memory 
+            UpShift1Eye=circshift(UpShift1Eye,[-1,0]);    %circshift is quick and use almost no time 
+            lowShift1Eye=diag(ones(nZ,1));
+            lowShift1Eye=circshift(lowShift1Eye,[1,0]);
+    end
+    
+%     K=kFieldFunc(mesh.H,mesh.Ks);
+    
+    Amethod=1;
+    switch Amethod
+        case 1  
+            %write 3 diagonal band  %very fast. as avoid matrix 
+            %calculation and use a element wise operation.
+            centerDiag = (2.*K+ lowShift1Eye*K+UpShift1Eye*K)/(2*deltaZ^2)+C/deltaT;       %A_center diagonal %first and last elements are meaningless                    
+            upDiag     = (K+ lowShift1Eye*K)/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
+            downDiag   = (K+ UpShift1Eye*K)/(-2*deltaZ^2);                                 %A_down   diagonal %first and last elements are meaningless         
+        case 2     
+            %rewrite 3 diagonal band  %fast. do matrix calculation though
+            %using sparse operations.
+            centerDiag = (2.*speye(nZ)+lowShift1Eye+UpShift1Eye)./(2*deltaZ^2)*K+C/deltaT;   
+            upDiag     = (speye(nZ)+lowShift1Eye)./(2*deltaZ^2)*K;
+            downDiag   = (speye(nZ)+UpShift1Eye)./(2*deltaZ^2)*K;
+    end
+    
+    B          = -(UpShift1Eye*K-lowShift1Eye*K)/(2*deltaZ)+previousH.*C/deltaT;
+
+    %make spare metrix A                    
+    %Todo this part may be improved using better sparse diag
+    Amethod=4;
+    switch Amethod 
+        case 1      %Very fast
+            A_all=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
+        case 2      %Slow. Always NOT creat full matrix and then sparse it.
+            A_all=sparse (diag(centerDiag,0) +circshift(diag(upDiag,0),[0,-1]) +circshift(diag(downDiag,0),[0,1]));   
+        case 3      %not necessary but show a more clear formulation
+            left1Eye=circshift(spdiags(ones(nZ),0,nZ,nZ),[0,-1]);
+            right1Eye=circshift(spdiags(ones(nZ),0,nZ,nZ),[0,1]);
+            A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*left1Eye + spdiags(downDiag,0,nZ,nZ)*right1Eye;   
+        case 4
+            A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*lowShift1Eye + spdiags(downDiag,0,nZ,nZ)*UpShift1Eye;  
+        case 5
+%             A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*lowShift1Eye + spdiags(downDiag,0,nZ,nZ)*UpShift1Eye;  
+        case 6
+            A_all=centerDiag*speye(nZ) +upDiag*speye(nZ)*lowShift1Eye + downDiag*speye(nZ)*lowShift1Eye;  
+        otherwise 
+    end
+
+    %pick free node and componsate for dbc involved 
+
+    B=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);
+    A=A_all(nodeIndex,nodeIndex);
+
+end
+
+
+
+%%
+% POD picardAxbForm
+function [A,B]=picardAxbFormPod(mesh,previousH,deltaT,V)
+%calculate linear system equation Ax=B of free node with shirft matrix
+
+    % Auxiliary variable   
+    dbcIndex=find(mesh.dbcFlag);     %specify DBC index for later fitting in value
+    nodeIndex=find(~mesh.dbcFlag);   %specify free node index
+    nNode=sum(~mesh.dbcFlag);        %number of free node   
+
+    deltaZ=mesh.deltaZ;
+    nZ=mesh.nZ;
+   
+    C=mesh.C;
+    K=mesh.K;
+    
+    % P=diag(dbcFlag);
+    % P=spdiags(dbcFlag,0,nZ,nZ)    %better solution
+    
+    % Calculation
+    UpShift1Eye =circshift(speye(nZ),[-1,0]);
+    lowShift1Eye=circshift(speye(nZ),[1,0]);
+
+    %write 3 diagonal band  %very fast. as avoid matrix 
+    %calculation and use a element wise operation.
+    centerDiag = (2.*K+ lowShift1Eye*K+UpShift1Eye*K)/(2*deltaZ^2)+C/deltaT;       %A_center diagonal %first and last elements are meaningless                    
+    upDiag     = (K+ lowShift1Eye*K)/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
+    downDiag   = (K+ UpShift1Eye*K)/(-2*deltaZ^2);                                 %A_down   diagonal %first and last elements are meaningless         
+    
+    B          = -(UpShift1Eye*K-lowShift1Eye*K)/(2*deltaZ)+previousH.*C/deltaT;
+
+    %make spare metrix A                    
+    %Todo this part may be improved using better sparse diag
+
+    A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*lowShift1Eye + spdiags(downDiag,0,nZ,nZ)*UpShift1Eye;  
+
+
+    Ar=V'*A_all*V;
+    Br=V'*B;
+    
+    %pick free node and componsate for dbc involved 
+    B=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);
+    A=A_all(nodeIndex,nodeIndex);
+
+end
+
+
+
 
 
 
@@ -253,103 +451,6 @@ function mesh=picardUpdate2(mesh,deltaT,nMaxIteration,maxIteError)
        
             
 end
-
-
-
-%% 
-function picardAbForm()
-% different way to update mesh value using Picards iteration including calculate linear system equation Ax=B of free node.
-
-            imethod=3;
-            switch imethod 
-                case 1      %simple, easy to understand but slow program
-                    
-                    indexMatrix=zeros(nZ,1);
-                    indexMatrix(2:end-1)=1:nZ-2;                
-                    i=1;
-                    
-                    for j =2:nZ-1
-
-                        kHalfUp   =(K(j,i)+K(j-1,i))/2;
-                        kHalfDown =(K(j,i)+K(j+1,i))/2;
-
-                        cCenter=C(j,i);
-
-                        wUp   = -kHalfUp  ./deltaZ^2;
-                        wDown = -kHalfDown./deltaZ^2;
-
-                        wCenter=cCenter/deltaTime-wUp-wDown;
-                        b=(kHalfDown-kHalfUp)/deltaZ-H_PreviousTime(j,i)*cCenter/deltaTime;
-
-                        indexCenter=indexMatrix(j,i);
-                        indexUp=indexMatrix(j-1,i);
-                        indexDown=indexMatrix(j+1,i);
-
-                        %Check BC and modify 
-                        %check if top BC
-                        if j==2 
-                            indexUp=0;
-                            b=b+wUp*H(j-1,i);
-                        end
-
-                        %check if bottom BC
-                        if j==nZ-1 
-                            indexDown=0;
-                            b=b+wDown*H(j+1,i);
-                        end
-
-                        if indexUp>0 A(indexCenter,indexUp)=wUp; end
-                        if indexDown>0 A(indexCenter,indexDown)=wDown; end
-
-                        A(indexCenter,indexCenter)=wCenter;
-                        B(indexCenter,1)=b;
-
-                    end
-                    
-                case 2         %% Method II semi-Vectorize code (prepare for Method III)        
-                    
-                    Atemp=zeros(nZ);
-                    Btemp=zeros(nZ,1);
-%                     nZ=nNode;
-
-                    for i=2:nZ-1    % for all non-boundary points
-                       Atemp(i,i)   = (2*K(i)+ K(i-1)+K(i+1))/(2*deltaZ^2)+C(i)/deltaTime;
-                       Atemp(i,i-1) = (K(i)+ K(i-1))/(-2*deltaZ^2);
-                       Atemp(i,i+1) = (K(i)+ K(i+1))/(-2*deltaZ^2); 
-                       Btemp(i)     = (K(i+1)-K(i-1))/(2*deltaZ)-H_PreviousTime(i)*C(i)/deltaTime;
-
-                    end
-
-                    A=Atemp(nodeIndex,nodeIndex);
-                    B=Btemp(nodeIndex)+Atemp(nodeIndex,dbcIndex)*H(dbcIndex);
-                    
-                case 3      %% Method III Vectorize code    
-                    
-                    centerDiag = (2.*K+ circshift(K,1)+circshift(K,-1))/(2*deltaZ^2)+C/deltaTime;  %A_center diagonal %first and last elements are meaningless                    
-                    upDiag     = (K+ circshift(K,1))/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
-                    downDiag   = (K+ circshift(K,-1))/(-2*deltaZ^2);                               %A_down   diagonal %first and last elements are meaningless 
-                        
-                    Btemp      = (circshift(K,-1)-circshift(K,1))/(2*deltaZ)-H_PreviousTime.*C/deltaTime;
-                                      
-                    %make spare A                    
-                    %Todo this part maybe improved using better sparse diag
-                    Amethod=1;
-                    switch Amethod 
-                        case 1      %Very fast
-                            Atemp=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
-                        case 2
-                            Atemp=sparse (diag(centerDiag,0) +circshift(diag(upDiag,0),[0,-1]) +circshift(diag(downDiag,0),[0,1]));       
-                        otherwise 
-                    end
-                                                                        
-                    %pick free node and componsate for dbc involved 
-                    A=Atemp(nodeIndex,nodeIndex);
-                    B=Btemp(nodeIndex)+Atemp(nodeIndex,dbcIndex)*H(dbcIndex);
-             
-                otherwise 
-                    error('no such method')
-            end
-    end
 
 
 
