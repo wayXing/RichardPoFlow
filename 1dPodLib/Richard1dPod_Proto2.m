@@ -171,17 +171,17 @@ podTimeCostFom=toc
 
 
 % Plot
-% figure(1)
-% for t=1:nTime
-%     plot(TheataRecord(:,t))
-%     hold on 
-%     plot(TheataRecord2(:,t))
-%     hold off
-%     title(sprintf('time=%i',t))
-%     drawnow
-%     frame(t)=getframe;
-% 
-% end
+figure(1)
+for t=1:nTime
+    plot(TheataRecord(:,t))
+    hold on 
+    plot(TheataRecord2(:,t))
+    hold off
+    title(sprintf('time=%i',t))
+    drawnow
+    frame(t)=getframe;
+
+end
 
 
   
