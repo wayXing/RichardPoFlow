@@ -1,0 +1,94 @@
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=latex 2015.7.28)  17 MAY 2017 16:12
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**wq
+(/usr/local/texlive/2015/texmf-dist/tex/latex/tools/s.tex
+LaTeX2e <2015/01/01>
+Babel <3.9l> and hyphenation patterns for 79 languages loaded.
+File ignored
+)
+*d
+
+! LaTeX Error: Missing \begin{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+<*> d
+     
+You're in trouble here.  Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+Missing character: There is no d in font nullfont!
+
+*^^[^^[
+! Text line contains an invalid character.
+<*> ^^[
+       ^^[
+A funny symbol that I can't read has just been input.
+Continue, and I'll forget that it ever happened.
+
+! Text line contains an invalid character.
+<*> ^^[^^[
+          
+A funny symbol that I can't read has just been input.
+Continue, and I'll forget that it ever happened.
+
+
+Overfull \hbox (20.0pt too wide) detected at line 0
+[] 
+ []
+
+
+*wq
+
+! LaTeX Error: Missing \begin{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+<*> w
+     q
+You're in trouble here.  Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+Missing character: There is no w in font nullfont!
+Missing character: There is no q in font nullfont!
+
+*
+
+Overfull \hbox (20.0pt too wide) detected at line 0
+[] 
+ []
+
+(Please type a command or say `\end')
+*
+(Please type a command or say `\end')
+*
+(Please type a command or say `\end')
+*
+(Please type a command or say `\end')
+*\end
+
+*\end
+! TeX capacity exceeded, sorry [input stack size=5000].
+\end #1->\csname end#1
+                      \endcsname \@checkend {#1}\expandafter \endgroup \if@e...
+<*> \end
+        
+If you really absolutely need more capacity,
+you can ask a wizard to enlarge me.
+
+ 
+Here is how much of TeX's memory you used:
+ 7 strings out of 493090
+ 256 string characters out of 6134868
+ 54280 words of memory out of 5000000
+ 3590 multiletter control sequences out of 15000+600000
+ 3640 words of font info for 14 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 5000i,0n,5000p,82b,14s stack positions out of 5000i,500n,10000p,200000b,80000s
+No pages of output.

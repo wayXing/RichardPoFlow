@@ -1,10 +1,11 @@
-function [] = Richard1dPod_Proto2()
+function [] = Richard1dPod_Proto3()
 % Richars equation 1D pod solver testing file.
 % The function focus on fix Dirichlet BC.
 % This function serves as a Demo for all Richard solver developed in this
 % project.
 % Proto1: created from Richard1d_Demo3() show experiment 1d POD method.
 % Proto2: take away function picardUpdate and use 1dPodLib
+% Proto3: created from Proto3 to make DEIM POD
 %
 % Input parameters:
 %
@@ -17,7 +18,7 @@ function [] = Richard1dPod_Proto2()
 %
 % See also: 
 % Author:   Wei Xing
-% History:  10/05/2017  file created
+% History:  18/05/2017  file created
 %
 tic
 %% Setup
@@ -168,20 +169,30 @@ for t=1:nTime
 end
 podTimeCostFom=toc  
 
+%% DEIM POD
 
 
-% Plot
-% figure(1)
-% for t=1:nTime
-%     plot(TheataRecord(:,t))
-%     hold on 
-%     plot(TheataRecord2(:,t))
-%     hold off
-%     title(sprintf('time=%i',t))
-%     drawnow
-%     frame(t)=getframe;
-% 
-% end
+
+
+
+
+
+
+
+
+
+%% Plot
+figure(1)
+for t=1:nTime
+    plot(TheataRecord(:,t))
+    hold on 
+    plot(TheataRecord2(:,t))
+    hold off
+    title(sprintf('time=%i',t))
+    drawnow
+    frame(t)=getframe;
+
+end
 
 
   

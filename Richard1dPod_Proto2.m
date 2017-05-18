@@ -1,9 +1,10 @@
-function [] = Richard1dPod_Proto1()
+function [] = Richard1dPod_Proto2()
 % Richars equation 1D solver tester.
 % The function focus on fix Dirichlet BC.
 % This function serves as a Demo for all Richard solver developed in this
 % project.
 % Proto1: created from Richard1d_Demo3() show experiment 1d POD method.
+% Proto2: created from Proto1 to test hyper reduction via DEIM 
 %
 % Input parameters:
 %
@@ -16,12 +17,12 @@ function [] = Richard1dPod_Proto1()
 %
 % See also: 
 % Author:   Wei Xing
-% History:  09/05/2017  file created
+% History:  18/05/2017  file created
 %
 tic
 %% Setup
 % Spatial setup
-lengthZ=1000;
+lengthZ=100;
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
@@ -112,17 +113,17 @@ podTimeCostFom=toc
 
 
 % Plot
-% figure(1)
-% for t=1:nTime
-%     plot(TheataRecord(:,t))
-%     hold on 
-%     plot(TheataRecord2(:,t))
-%     hold off
-%     title(sprintf('time=%i',t))
-%     drawnow
-%     frame(t)=getframe;
-% 
-% end
+figure(1)
+for t=1:nTime
+    plot(TheataRecord(:,t))
+    hold on 
+    plot(TheataRecord2(:,t))
+    hold off
+    title(sprintf('time=%i',t))
+    drawnow
+    frame(t)=getframe;
+
+end
 
 
   
@@ -198,6 +199,62 @@ nodeIndex=find(~mesh.dbcFlag);   %specify free node index
         
     end
 end
+
+
+%%
+function mesh=picardDeimPodUpdate(mesh,deltaT,nMaxIteration,maxIteError,V)
+%update mesh value using Picards iteration
+
+nodeIndex=find(~mesh.dbcFlag);   %specify free node index  
+
+    previousH=mesh.H;   
+    %main   
+    for k=1:nMaxIteration 
+        H0=mesh.H;  %preserved for iteration compare
+        
+        %update mesh value 
+        mesh.C=theataDifFunc(mesh.H);
+        mesh.K=kFunc(mesh.H);
+        
+        [A,B]=picardAxbForm2(mesh,previousH,deltaT);
+        
+        %POD decompose
+        %POD only used for sloving Ax=b thus no huge improvements.
+        Ar=V(nodeIndex,:)'*A*V(nodeIndex,:);
+        Br=V(nodeIndex,:)'*B;
+        
+        %solve linear equation
+        hr=Ar\(Br);
+        
+        %reassemble
+        h=V(nodeIndex,:)*hr;
+        
+        %update mesh value
+         
+        mesh.H(nodeIndex)=h;
+         
+        %stopping criteria
+        sseIte=sum((mesh.H(:)-H0(:)).^2);
+        if sqrt(sseIte)<maxIteError 
+            break 
+        end
+        
+
+    end
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

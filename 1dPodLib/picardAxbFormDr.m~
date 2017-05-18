@@ -76,28 +76,22 @@ end
     downDiagR   = (Vk + UpShift1Eye*Vk) ./(-2*deltaZ^2) *Zk;  
 
     
-    Ar=[];
+    
     for i=1:length(Zk)
        
 %         ArC=Ar +Vh'* spdiags(centerDiagR(:,i),0,nZ,nZ)*Vh .*Zk(i);  
 %                +Vh'* spdiags(upDiagR(:,i),    0,nZ,nZ)*lowShift1Eye *Vh 
 %                +Vh'* spdiags(downDiagR(:,i),  0,nZ,nZ)*UpShift1Eye  *Vh;  
 
-        %ArV means Ar's basis V. a matrix basis.
-        ArV(i)=   Vh'* (2.*Vk(:,i)+ lowShift1Eye*Vk(:,i)+UpShift1Eye*Vk(:,i))./(2*deltaZ^2) *Vh .*Zk(i)...
-                + Vh'* (Vk(:,i)   + lowShift1Eye*Vk(:,i))                    ./(-2*deltaZ^2)*Vh .*Zk(i)...  
-                + Vh'* (Vk(:,i)   + UpShift1Eye*Vk(:,i))                     ./(-2*deltaZ^2)*Vh .*Zk(i)...
-                + Vh'* Vc(:,i)./deltaT *Vh .*Zc(i);
+        ArV(i)=    Vh'* (2.*Vk(:,i)+ lowShift1Eye*Vk(:,i)+UpShift1Eye*Vk(:,i))*Vh./(2*deltaZ^2).*Zk(i)...
+                + Vh'* Vc(:,i)/deltaT .*Zc(i)...
+                + Vh'* (Vk(:,i) + lowShift1Eye*Vk(:,i))./(-2*deltaZ^2)*Vh .*Zk(i)...  
+                + Vh'* (Vk(:,i) + UpShift1Eye*Vk(:,i)) ./(-2*deltaZ^2)*Vh .*Zk(i);  %ArV em
         
             
         Ar=Ar+ArV(i);
         
     end
-    
-    %%TODO consider very carefully whether to use P(pickup matrix) to take
-    %%known node.
-    
-    
     
 
 
