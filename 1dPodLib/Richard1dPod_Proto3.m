@@ -28,12 +28,12 @@ deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthTime=300;
+lengthTime=200;
 deltaT=1;
 nTime=lengthTime/deltaT;
 
 % Iteration solver setup
-nMaxIteration=1000;
+nMaxIteration=100;
 maxIteError=0.1;
 
 
@@ -103,16 +103,16 @@ for t=1:nTime
             break 
         end
     end 
-    TheataRecord(:,t)=mesh.H;
+    hRecord(:,t)=mesh.H;
     
 end
 fomTimeCostFom=toc  
 
 
 %% POD
-podEnergy=0.999;
+podEnergy=0.99;
 
-[U,S,V]=svd(TheataRecord,'econ');
+[U,S,V]=svd(hRecord,'econ');
 % [U,S,V]=svd(H);
 energy=diag(S);
 cumulatedEnergy= cumsum(energy)./sum(energy);
@@ -169,13 +169,74 @@ for t=1:nTime
 end
 podTimeCostFom=toc  
 
+%% DEIM nonlinear function 
+nDeim=30;
+for t=1:nTime
+    kRecord(:,t)=kFieldFunc(hRecord(:,t),mesh.Ks);
+end
+[Vk,~,~]=svd(kRecord);
+[~,~,Pk] = DEIM(Vk);
+Pk=Pk(:,1:nDeim);
+Vk=Vk(:,1:nDeim);
+Dk=Vk*inv(Pk'*Vk);
+
+%c
+cRecord=theataDifFunc(hRecord);
+[Vc,~,~]=svd(cRecord);
+[~,~,Pc] = DEIM(Vc);
+Pc=Pc(:,1:nDeim);
+Vc=Vc(:,1:nDeim);
+Dc=Vc*inv(Pc'*Vc);
+
+
 %% DEIM POD
+mesh.H=h_init;
+mesh.C=theataDifFunc(mesh.H);
+% mesh.K=kFunc(mesh.H);
+mesh.K=kFieldFunc(mesh.H,mesh.Ks);
 
+nodeIndex=find(~mesh.dbcFlag);   %specify free node index   
 
+tic
+for t=1:nTime
+    
+%     previousH=mesh.H;
+    previousZh=V'*mesh.H;
+    % Picard iteration
+    for k=1:nMaxIteration 
+        H0=mesh.H;  %preserved for iteration compare
+        
+        %update mesh value 
+%         mesh.C=theataDifFunc(mesh.H);
+% %         mesh.K=kFunc(mesh.H);
+%         mesh.K=kFieldFunc(mesh.H,mesh.Ks);
+        
+%         [Ar,Br]=picardAxbFormDr2(mesh,previousH,deltaT,V,mesh.K,mesh.C);
+        
+        Zk=Pk'*kFieldFunc(mesh.H,mesh.Ks);
+        Zc=Pc'*theataDifFunc(mesh.H);
+        Zh=V'*H0;
 
-
-
-
+        [Ar,Br]=picardAxbFormDr(mesh,previousZh,deltaT,V,Zh,Dk,Zk,Dc,Zc);
+        
+        %solve linear equation
+        Zh=Ar\(Br);
+        h=V*Zh;
+        
+        %update mesh value       
+        mesh.H=h;
+         
+        %stopping criteria
+        sseIte=sum((mesh.H(:)-H0(:)).^2);
+        if sqrt(sseIte)<maxIteError 
+            break 
+        end
+        disp('.')
+    end 
+    TheataRecord3(:,t)=mesh.H;
+    
+end
+deimPodTimeCostFom=toc  
 
 
 
@@ -184,9 +245,10 @@ podTimeCostFom=toc
 %% Plot
 figure(1)
 for t=1:nTime
-    plot(TheataRecord(:,t))
+    plot(hRecord(:,t))
     hold on 
     plot(TheataRecord2(:,t))
+    plot(TheataRecord3(:,t))
     hold off
     title(sprintf('time=%i',t))
     drawnow

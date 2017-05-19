@@ -73,7 +73,7 @@ end
     
 %% make spare metrix A from bands                  
 %Todo this part may be improved using better sparse diag
-iMethod=7;      %recommand 4 & 7
+iMethod=4;
 switch iMethod 
     case 1      %Very fast
         A_all=spdiags(centerDiag,0,nZ,nZ) +circshift(spdiags(upDiag,0,nZ,nZ),[0,-1]) +circshift(spdiags(downDiag,0,nZ,nZ),[0,1]);                                          
@@ -85,12 +85,10 @@ switch iMethod
         A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*left1Eye + spdiags(downDiag,0,nZ,nZ)*right1Eye;   
     case 4
         A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*lowShift1Eye + spdiags(downDiag,0,nZ,nZ)*UpShift1Eye;  
-    case 5    %failure
+    case 5
 %             A_all=spdiags(centerDiag,0,nZ,nZ) +spdiags(upDiag,0,nZ,nZ)*lowShift1Eye + spdiags(downDiag,0,nZ,nZ)*UpShift1Eye;  
     case 6
         A_all=centerDiag*speye(nZ) +upDiag*speye(nZ)*lowShift1Eye + downDiag*speye(nZ)*lowShift1Eye;  
-    case 7  %Very fast and clear
-        A_all=spdiags([downDiag,centerDiag,upDiag],-1:1,nZ,nZ);
     otherwise 
 end
 
@@ -100,20 +98,20 @@ B          = -(UpShift1Eye*K-lowShift1Eye*K)/(2*deltaZ)+previousH.*C/deltaT;
     %pick free node and componsate for dbc involved 
 
 %% Picking up the unknown free node
-iMethod=2;
+iMethod=1;
 switch iMethod
     case 1    
-        B=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);
+        B1=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);
         A=A_all(nodeIndex,nodeIndex);
     case 2
         Pwave=spdiags(mesh.dbcFlag,0,nZ,nZ);    %Picking up matrix. maybe useful
         P    =spdiags(~mesh.dbcFlag,0,nZ,nZ);    %Picking up matrix. maybe useful
         
         Pwave( ~any(Pwave,2), : ) = [];  %remove zero rows
-        P(~any(P,2), : )          = [];  %remove zero rows
+        P( ~any(P,2) )        = [];   %remove zero rows
         
 %         B=P*B-P*A_all*P'* P*mesh.H;
-        B=P*B-P*A_all*Pwave'*Pwave*mesh.H;
+        B2=P*B-P*A_all*Pwave*Pwave*mesh.H;
         A=P*A_all*P';
 end
     

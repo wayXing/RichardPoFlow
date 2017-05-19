@@ -1,6 +1,6 @@
-function [Ar,Br]=picardAxbFormDr(mesh,previousZh,deltaT,Vh,Zh,Vk,Zk,Vc,Zc)
+function [Ar,Br]=picardAxbFormDr2(mesh,previousH,deltaT,Vh,K,C)
 %calculate linear system equation Ax=B using Picards scheme with dimension
-%reduction DEMI.
+%reduction DEMI. Temp.2.
 %
 % Input parameters:
 %   mesh             -mseh structure 
@@ -18,11 +18,22 @@ function [Ar,Br]=picardAxbFormDr(mesh,previousZh,deltaT,Vh,Zh,Vk,Zk,Vc,Zc)
 % History:  10/05/2017  file created
 %
 %
-%     Kr=Vk*Zk; %approximation to K
-%     Cr=Vc*Zc;
+% Kr=Vk*Zk; %approximation to K
+% Cr=Vc*Zc;
 % 
-%     C=mesh.C;
-%     K=mesh.K;
+% C=mesh.C;
+% K=mesh.K;
+
+nDeim=10;
+
+[Vk,~,~]=svd(K,'econ');
+Vk=Vk(:,1:nDeim);
+Zk=Vk'*K;
+
+[Vc,~,~]=svd(C,'econ');
+Vc=Vc(:,1:nDeim);
+Zc=Vc'*C;
+
 
 
 %%  Auxiliary variable   
@@ -33,23 +44,8 @@ nNode=sum(~mesh.dbcFlag);        %number of free node
 deltaZ=mesh.deltaZ;
 nZ=mesh.nZ;
 
-% P=diag(mesh.dbcFlag);              %Picking up matrix. maybe useful
-% P=spdiags(mesh.dbcFlag,0,nZ,nZ)    %Picking up matrix. maybe useful
-
-% P=diag(mesh.dbcFlag);     
-
-Pwave=spdiags(mesh.dbcFlag,0,nZ,nZ);    %Picking up matrix. maybe useful
-P    =spdiags(~mesh.dbcFlag,0,nZ,nZ);    %Picking up matrix. maybe useful
-
-Pwave( ~any(Pwave,2), : ) = [];  %remove zero rows
-P(~any(P,2), : )          = [];  %remove zero rows
-
-% PP=P'*P;
-% PPwave=Pwave'*Pwave;
-% 
-% VhWave=Pwave'*Pwave*Vh;
-% Vh=P'*P*Vh;
-
+% P=diag(dbcFlag);              %Picking up matrix. maybe useful
+% P=spdiags(dbcFlag,0,nZ,nZ)    %Picking up matrix. maybe useful
 
 %% form shift matrix. This matrix is not always needed, Depends on the method.
 iMethod=1;
@@ -68,11 +64,6 @@ switch iMethod
         lowShift1Eye=diag(ones(nZ,1));
         lowShift1Eye=circshift(lowShift1Eye,[1,0]);
 end
-    
-% KrLowShift=lowShift1Eye*Vk; 
-% KrUpShift=UpShift1Eye*Vk; 
-% Kr=Vk*Zk;     %approximation to K using Kr
-
 
 %% 
 %may be useful
@@ -87,11 +78,7 @@ end
 %     downDiagR   = (Vk + UpShift1Eye*Vk) ./(-2*deltaZ^2) *Zk;  
 
     
-%     Ar=[];
-    [~,nDimR]=size(Vh);
-    Ar=zeros(nDimR,nDimR);
-    Ar2=zeros(nDimR,nDimR);
-    
+    Ar=[];
     for i=1:length(Zk)
         %loop can be replace using tensor product.see note.
        
@@ -100,23 +87,17 @@ end
 %                +Vh'* spdiags(downDiagR(:,i),  0,nZ,nZ)*UpShift1Eye  *Vh;  
 
         %ArV means Ar's basis V. a matrix basis.
-        centerDiagRVPart1(:,i)= (2.*Vk(:,i)+ lowShift1Eye*Vk(:,i)+UpShift1Eye*Vk(:,i))./(2*deltaZ^2);
-        centerDiagRVPart2(:,i)= Vc(:,i)./deltaT;
-        upDiagR(:,i)          = (Vk(:,i)   + lowShift1Eye*Vk(:,i))                    ./(-2*deltaZ^2);
-        downDiagR(:,i)        = (Vk(:,i)   + UpShift1Eye*Vk(:,i))                     ./(-2*deltaZ^2);
+        centerDiagRVPart1(i)= (2.*Vk(:,i)+ lowShift1Eye*Vk(:,i)+UpShift1Eye*Vk(:,i))./(2*deltaZ^2);
+        centerDiagRVPart2(i)= Vc(:,i)./deltaT;
+        upDiagR(i)          = (Vk(:,i)   + lowShift1Eye*Vk(:,i))                    ./(-2*deltaZ^2);
+        downDiagR(i)        = (Vk(:,i)   + UpShift1Eye*Vk(:,i))                     ./(-2*deltaZ^2);
         
-%         ArV(:,:,i)=  Vh'*spdiags(centerDiagRVPart1(:,i),0,nZ,nZ)              *Vh .*Zk(i)...
-%                     +Vh'*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)              *Vh .*Zc(i)...    
-%                     +Vh'*spdiags(upDiagR(:,i)          ,0,nZ,nZ)*lowShift1Eye *Vh .*Zk(i)...
-%                     +Vh'*spdiags(downDiagR(:,i)        ,0,nZ,nZ)*UpShift1Eye  *Vh .*Zk(i);
+        ArV(i)=  Vh'*spdiags(centerDiagRVPart1(i),0,nZ,nZ)              *Vh .*Zk(i)...
+                +Vh'*spdiags(centerDiagRVPart2(i),0,nZ,nZ)              *Vh .*Zc(i)...    
+                +Vh'*spdiags(upDiagR(i)          ,0,nZ,nZ)*lowShift1Eye *Vh .*Zk(i)...
+                +Vh'*spdiags(downDiagR(i)        ,0,nZ,nZ)*UpShift1Eye  *Vh .*Zk(i);
         
-        %Add considerations to BC        
-        ArV(:,:,i)=  Vh'*P'*P*spdiags(centerDiagRVPart1(:,i),0,nZ,nZ)              *P'*P*Vh .*Zk(i)...
-                    +Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)              *P'*P*Vh .*Zc(i)...    
-                    +Vh'*P'*P*spdiags(upDiagR(:,i)          ,0,nZ,nZ)*lowShift1Eye *P'*P*Vh .*Zk(i)...
-                    +Vh'*P'*P*spdiags(downDiagR(:,i)        ,0,nZ,nZ)*UpShift1Eye  *P'*P*Vh .*Zk(i);                
-                           
-        Ar=Ar+ArV(:,:,i);
+        Ar=Ar+ArV(i);
         
         %%TODO consider very carefully whether to use P(pickup matrix) to take
         %%known node.
@@ -125,13 +106,6 @@ end
 %                 +(P*Vh)'*(P*spdiags(centerDiagRVPart2(i),0,nZ,nZ)             *P') *(P*Vh) .*Zc(i)...    
 %                 +(P*Vh)'*(P*spdiags(upDiagR(i)          ,0,nZ,nZ)*lowShift1Eye*P') *(P*Vh) .*Zk(i)...
 %                 +(P*Vh)'*(P*spdiags(downDiagR(i)        ,0,nZ,nZ)*UpShift1Eye *P') *(P*Vh) .*Zk(i);    
-
-        ArV2(:,:,i)= Vh'*P'*P*spdiags(centerDiagRVPart1(:,i),0,nZ,nZ)              *Pwave'*Pwave*Vh .*Zk(i)...
-                    +Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)              *Pwave'*Pwave*Vh .*Zc(i)...    
-                    +Vh'*P'*P*spdiags(upDiagR(:,i)          ,0,nZ,nZ)*lowShift1Eye *Pwave'*Pwave*Vh .*Zk(i)...
-                    +Vh'*P'*P*spdiags(downDiagR(:,i)        ,0,nZ,nZ)*UpShift1Eye  *Pwave'*Pwave*Vh .*Zk(i);                
-                         
-        Ar2=Ar2+ArV2(:,:,i);
         
     end
     
@@ -145,10 +119,13 @@ end
 %     B          = -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk*Zk...
 %                  +previousH./deltaT .*(Vc *Zc);
                  
-    Br =   Vh'*P'*P * -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk*Zk...
-          +Vh'*P'*P *   ((Vh*previousZh) ./deltaT .*(Vc *Zc));
+
+      %form Br from basis
+%     Br =   Vh'* -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk*Zk...
+%           +Vh'*   ((Vh*previousZh) ./deltaT .*(Vc *Zc));
       
-    Br =   Br- Ar2*Zh;
+      Br          = -(UpShift1Eye*K-lowShift1Eye*K)/(2*deltaZ)+previousH.*C/deltaT;
+          
     
     
 % centerDiagR =@(Zk) (2.*Vk*Zk+ KrLowShift*Zk+KrUpShift*Zk)./(2*deltaZ^2)+Vc*Zc./deltaT; %R means approximation from reduced basis
@@ -160,16 +137,9 @@ end
 % upDiag     = (Vk*Zk+ KrLowShift*Zk)/(-2*deltaZ^2);                                %A_up     diagonal %first and last elements are meaningless                  
 % downDiag   = (Vk*Zk+ KrUpShift*Zk)/(-2*deltaZ^2);   
 
-%      B=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);
-    %                     A=A_all(nodeIndex,nodeIndex);
 
 
-
-
-
-
-
-
+%Original code
 %             %% form the sparse band   
 %             iMethod=1;
 %             switch iMethod
