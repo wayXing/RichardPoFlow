@@ -23,7 +23,7 @@ function [] = Richard1dPod_Proto4()
 tic
 %% Setup
 % Spatial setup
-lengthZ=300;
+lengthZ=10000;
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
@@ -174,7 +174,7 @@ nDeim=30;
 for t=1:nTime
     kRecord(:,t)=kFieldFunc(hRecord(:,t),mesh.Ks);
 end
-[Vk,~,~]=svd(kRecord);
+[Vk,~,~]=svd(kRecord,'econ');
 [~,~,Pk] = DEIM(Vk);
 Pk=Pk(:,1:nDeim);
 Vk=Vk(:,1:nDeim);
@@ -182,7 +182,7 @@ Dk=Vk*inv(Pk'*Vk);  %DEIM basis
 
 %c
 cRecord=theataDifFunc(hRecord);
-[Vc,~,~]=svd(cRecord);
+[Vc,~,~]=svd(cRecord,'econ');
 [~,~,Pc] = DEIM(Vc);
 Pc=Pc(:,1:nDeim);
 Vc=Vc(:,1:nDeim);
