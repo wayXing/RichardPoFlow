@@ -138,16 +138,26 @@ end
     
     
     %% form B vector 
-%     B          = -(UpShift1Eye*Vk-lowShift1Eye*Vk)./(2*deltaZ)...
-%                  +previousH.*C./deltaT;
-%              
-%              
-%     B          = -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk*Zk...
-%                  +previousH./deltaT .*(Vc *Zc);
-                 
-    Br =   Vh'*P'*P * -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk*Zk...
-          +Vh'*P'*P *   ((Vh*previousZh) ./deltaT .*(Vc *Zc));
+    
+    iMethod=1;
+    switch iMethod 
+        case 1
+        Br =   Vh'*P'*P * -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk*Zk...
+              +Vh'*P'*P *   ((Vh*previousZh) ./deltaT .*(Vc *Zc));
       
+        %case 2 representation is needed for real ROM
+        case 2
+        Brk=Vh'*P'*P * -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk*Zk;
+        Br=Brk;
+        for i=1:size(Vh,2)
+           Brhc(:,:,i)=Vh'*P'*P*spdiags(Vh(:,i),0,nZ,nZ)*Vc *previousZh(i)*Zc./deltaT;
+           Br         = Br +Brhc(:,:,i);
+        end
+    end
+    
+      
+      
+    %%Take away BC point in ROM  
     Br =   Br- Ar2*Zh;
     
     
@@ -162,12 +172,6 @@ end
 
 %      B=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);
     %                     A=A_all(nodeIndex,nodeIndex);
-
-
-
-
-
-
 
 
 %             %% form the sparse band   

@@ -1,11 +1,11 @@
-function [] = Richard1dPod_Proto3()
+function [] = Richard1dPod_Proto4()
 % Richars equation 1D pod solver testing file.
 % The function focus on fix Dirichlet BC.
 % This function serves as a Demo for all Richard solver developed in this
 % project.
 % Proto1: created from Richard1d_Demo3() show experiment 1d POD method.
 % Proto2: take away function picardUpdate and use 1dPodLib
-% Proto3: created from Proto3 to make DEIM POD
+% Proto3: created from Proto3. This script runs true DEIM POD
 %
 % Input parameters:
 %
@@ -18,18 +18,18 @@ function [] = Richard1dPod_Proto3()
 %
 % See also: 
 % Author:   Wei Xing
-% History:  18/05/2017  file created
+% History:  22/05/2017  file created
 %
 tic
 %% Setup
 % Spatial setup
-lengthZ=100;
+lengthZ=300;
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
 lengthTime=200;
-deltaT=2;
+deltaT=1;
 nTime=lengthTime/deltaT;
 
 % Iteration solver setup
@@ -110,7 +110,7 @@ fomTimeCostFom=toc
 
 
 %% POD
-podEnergy=0.99;
+podEnergy=0.99999;
 
 [U,S,V]=svd(hRecord,'econ');
 % [U,S,V]=svd(H);
@@ -170,7 +170,7 @@ end
 podTimeCostFom=toc  
 
 %% DEIM nonlinear function 
-nDeim=20;
+nDeim=30;
 for t=1:nTime
     kRecord(:,t)=kFieldFunc(hRecord(:,t),mesh.Ks);
 end
@@ -178,7 +178,7 @@ end
 [~,~,Pk] = DEIM(Vk);
 Pk=Pk(:,1:nDeim);
 Vk=Vk(:,1:nDeim);
-Dk=Vk*inv(Pk'*Vk);
+Dk=Vk*inv(Pk'*Vk);  %DEIM basis
 
 %c
 cRecord=theataDifFunc(hRecord);
@@ -186,10 +186,11 @@ cRecord=theataDifFunc(hRecord);
 [~,~,Pc] = DEIM(Vc);
 Pc=Pc(:,1:nDeim);
 Vc=Vc(:,1:nDeim);
-Dc=Vc*inv(Pc'*Vc);
+Dc=Vc*inv(Pc'*Vc);  %DEIM basis
 
 
 %% DEIM POD
+%initilize system.
 mesh.H=h_init;
 mesh.C=theataDifFunc(mesh.H);
 % mesh.K=kFunc(mesh.H);
@@ -197,33 +198,35 @@ mesh.K=kFieldFunc(mesh.H,mesh.Ks);
 
 nodeIndex=find(~mesh.dbcFlag);   %specify free node index   
 
+%Initialize ROM
+[romMesh]=picardAxbRomInit(mesh,V,Dk,Dc);
+
 tic
 for t=1:nTime
     
 %     previousH=mesh.H;
     previousZh=V'*mesh.H;
+%     Zh=V'*mesh.H;
     % Picard iteration
     for k=1:nMaxIteration 
         H0=mesh.H;  %preserved for iteration compare
         
-        %update mesh value 
-%         mesh.C=theataDifFunc(mesh.H);
-% %         mesh.K=kFunc(mesh.H);
-%         mesh.K=kFieldFunc(mesh.H,mesh.Ks);
-        
-%         [Ar,Br]=picardAxbFormDr2(mesh,previousH,deltaT,V,mesh.K,mesh.C);
+        %update mesh value        
+%         Zk=kFieldFunc(Pk'*mesh.H,Pk'*mesh.Ks);
+%         Zc=theataDifFunc(Pc'*mesh.H);
         
         Zk=Pk'*kFieldFunc(mesh.H,mesh.Ks);
         Zc=Pc'*theataDifFunc(mesh.H);
-        Zh=V'*H0;
-
-        [Ar,Br]=picardAxbFormDr(mesh,previousZh,deltaT,V,Zh,Dk,Zk,Dc,Zc);
         
+        Zh=V'*H0;        
+        
+        [Ar,Br]=picardAxbRomForm(romMesh,deltaT,previousZh,Zh,Zk,Zc);
+             
         %solve linear equation
         Zh=Ar\(Br);
-        h=V*Zh;
         
         %update mesh value       
+        h=V*Zh;
         mesh.H=h;
          
         %stopping criteria

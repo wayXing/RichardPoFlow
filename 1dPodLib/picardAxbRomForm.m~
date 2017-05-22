@@ -1,0 +1,45 @@
+function [Ar,Br]=picardAxbRomForm(romMesh,deltaT,previousZh,Zh,Zk,Zc)
+%Initilize Picard iteration using DEIM ROM
+%on the 1d h-based Richards equation
+%
+% Input parameters:
+%   mesh             -mseh structure 
+%   previousH        -value of mesh.H at last time step
+%   Vh                  
+%
+% Output parameters:
+%   A,B              -A*mesh.H_new=B;
+%
+% Examples: see Demo
+%
+% See also: 
+% Author:   Wei Xing
+% History:  22/05/2017  file created
+
+Ar=zeros(nDimR,nDimR);
+ArBC=zeros(nDimR,nDimR);
+
+%Ar matrix
+for i=1:size(Vk,2)
+
+    Ar= Ar+romMesh.Ark(:,:,i).*Zk(i) +romMesh.Arc(:,:,i).*Zc(i);
+
+    ArBC= Ar+romMesh.ArBCk(:,:,i).*Zk(i) +romMesh.ArBCc(:,:,i).*Zc(i);        
+
+end
+
+%Br matrix
+Br=romMesh.Brk*Zk;
+for i=1:size(Vh,2)  %number of pod basis
+    Br = Br +romMesh.Brhc(:,:,i)*previousZh(i)*Zc;
+end
+
+%%Take away BC point in ROM  
+Br =   Br- Ar2*Zh;
+
+
+
+
+
+
+end
