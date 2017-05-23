@@ -54,8 +54,8 @@ switch iMethod
 end
     
     
-    Ar=zeros(nPod,nPod);
-    ArBC=zeros(nPod,nPod);
+%     Ar=zeros(nPod,nPod);
+%     ArBC=zeros(nPod,nPod);
     
     %k related terms
     for i=1:nDeimK  %ONLY allow for nDeimK=nDeimC
@@ -140,6 +140,21 @@ end
     romMesh.nPod=nPod;
     romMesh.nDeimK=nDeimK;
     romMesh.nDeimC=nDeimC;
+    
+    % another way to accelerate
+    romMesh.mArk=reshape(Ark,[],nDeimK);
+    romMesh.mArc=reshape(Arc,[],nDeimC);
+
+    romMesh.mArBCk=reshape(ArBCk,[],nDeimK);
+    romMesh.mArBCc=reshape(ArBCc,[],nDeimC);
+
+    romMesh.mBrk=reshape(Brk,[],nDeimK);
+    romMesh.mBrhc=reshape(Brhc,[],nPod);
+    
+    
+    
+    
+%     romMesh.Brhc2=Brhc;
     
     
 %         Ar=Ar+Ark(:,:,i).*Zk(i) +Arc(:,:,i).*Zc(i);

@@ -100,7 +100,7 @@ B          = -(UpShift1Eye*K-lowShift1Eye*K)/(2*deltaZ)+previousH.*C/deltaT;
     %pick free node and componsate for dbc involved 
 
 %% Picking up the unknown free node
-iMethod=2;
+iMethod=1;
 switch iMethod
     case 1    
         B=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);

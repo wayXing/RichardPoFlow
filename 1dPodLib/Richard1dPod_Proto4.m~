@@ -20,21 +20,32 @@ function [] = Richard1dPod_Proto4()
 % Author:   Wei Xing
 % History:  22/05/2017  file created
 %
-tic
+clear
+close all
 %% Setup
 % Spatial setup
 lengthZ=100;
-deltaZ=0.01;
+deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthTime=200;
+lengthTime=600;
 deltaT=1;
 nTime=lengthTime/deltaT;
 
 % Iteration solver setup
-nMaxIteration=100;
-maxIteError=0.1;
+nMaxIteration=50;
+maxIteError=1;
+
+%
+podEnergy=0.999;
+
+%nDeim
+% nDeimK=30;
+% nDeimC=30;
+
+% nDeimK=nPOD;    %number of Deim basis for k term
+% nDeimC=nPOD;    %number of Deim basis for c term
 
 
 %% Initialize mesh
@@ -46,11 +57,12 @@ mesh.nZ=nZ;
 
 
 %%  Permeability field
-scale=0.005;        % overall magnitude of the permeability field. decide the changing speed.
-lengthcale=10;     %larger number means less stochastic (more correlation as one zooms in the 
+scale=0.05;        % overall magnitude of the permeability field. decide the changing speed.
+lengthcale=1;     %larger number means less stochastic (more correlation as one zooms in the 
                     %field) field. Thus gives smoother result.
+                    
 mesh.Ks=permeabilityField([Z(:)],lengthcale)*scale;
-
+% mesh.Ks=ones(length(Z),1)*scale;
 
 %% initial conditions and boundary value (DBC)
 h_init=ones(nZ,1)*-61.5; %value for all initial points
@@ -75,7 +87,8 @@ mesh.H=h_init;
 mesh.C=theataDifFunc(mesh.H);
 mesh.K=kFieldFunc(mesh.H,mesh.Ks);
 
-
+hSnapShot=[];
+nIterationFom=0;
 tic
 for t=1:nTime
     
@@ -97,28 +110,35 @@ for t=1:nTime
         nodeIndex=find(~mesh.dbcFlag);   %specify free node index   
         mesh.H(nodeIndex)=h;
          
+        hSnapShot=[hSnapShot,mesh.H];
         %stopping criteria
         sseIte=sum((mesh.H(:)-H0(:)).^2);
         if sqrt(sseIte)<maxIteError 
+            iterationRecordFom(t)=k;
             break 
+        else 
+            nIterationFom=nIterationFom+1;
         end
     end 
     hRecord(:,t)=mesh.H;
     
 end
 fomTimeCostFom=toc  
-
+nIterationFom
 
 %% POD
-podEnergy=0.999;
+% podEnergy=0.999;
+hSnapShot=hRecord;
 
-disp('POD decomposition process')
-[U,S,V]=svd(hRecord,'econ');
+disp('POD decomposition process...')
+[U,S,V]=svd(hSnapShot,'econ');
 
 % [U,S,V]=svd(H);
 energy=diag(S);
 cumulatedEnergy= cumsum(energy)./sum(energy);
 [~,nPOD]=min(abs(cumulatedEnergy-podEnergy))
+
+% nPOD=10;
 
 V=U(:,1:nPOD);  %call the pod basis V
 
@@ -131,6 +151,7 @@ mesh.K=kFieldFunc(mesh.H,mesh.Ks);
 
 nodeIndex=find(~mesh.dbcFlag);   %specify free node index   
 
+nIterationPod=0;
 tic
 for t=1:nTime
     
@@ -164,22 +185,27 @@ for t=1:nTime
         sseIte=sum((mesh.H(:)-H0(:)).^2);
         if sqrt(sseIte)<maxIteError 
             break 
+        else 
+            nIterationPod=nIterationPod+1;
         end
     end 
-    TheataRecord2(:,t)=mesh.H;
+    hRecord2(:,t)=mesh.H;
     
 end
 podTimeCostFom=toc  
+nIterationPod
 
 %% DEIM nonlinear function 
-% nDeimK=10;
-% nDeimC=10;
+% nDeimK=100;
+% nDeimC=100;
 
 nDeimK=nPOD;    %number of Deim basis for k term
 nDeimC=nPOD;    %number of Deim basis for c term
 
-for t=1:nTime
-    kRecord(:,t)=kFieldFunc(hRecord(:,t),mesh.Ks);
+%k
+disp('DEIM decomposition for k...')
+for t=1:size(hSnapShot,2)
+    kRecord(:,t)=kFieldFunc(hSnapShot(:,t),mesh.Ks);
 end
 % [Vk,~,~]=svd(kRecord,'econ');
 [Vk,~,~]=svds(kRecord,nDeimK);
@@ -190,7 +216,8 @@ Vk=Vk(:,1:nDeimK);
 Dk=Vk*inv(Pk'*Vk);  %DEIM basis
 
 %c
-cRecord=theataDifFunc(hRecord);
+disp('DEIM decomposition for c...')
+cRecord=theataDifFunc(hSnapShot);
 % [Vc,~,~]=svd(cRecord,'econ');
 [Vc,~,~]=svds(cRecord,nDeimC);
 
@@ -215,7 +242,7 @@ nodeIndex=find(~mesh.dbcFlag);   %specify free node index
 VTV=V'*V;
 Zh=V'*mesh.H;
 
-
+nIterationDeimPod=0;
 tic
 for t=1:nTime   
     previousZh=Zh;
@@ -238,6 +265,8 @@ for t=1:nTime
         sseIte=(Zh-Zh0)'*VTV*(Zh-Zh0); 
         if sqrt(sseIte)<maxIteError 
             break 
+        else 
+            nIterationDeimPod=nIterationDeimPod+1;
         end
 %         disp('.')
     end 
@@ -247,18 +276,18 @@ end
 deimPodTimeCostFom=toc  
 
 %after process
-TheataRecord3=V*ZhRecord;
-
+hRecord3=V*ZhRecord;
+nIterationDeimPod
 
 
 
 %% Plot
 figure(1)
-for t=1:nTime
+for t=1:1:nTime
     plot(hRecord(:,t))
     hold on 
-    plot(TheataRecord2(:,t))
-    plot(TheataRecord3(:,t))
+    plot(hRecord2(:,t))
+    plot(hRecord3(:,t))
     hold off
     title(sprintf('time=%i',t))
     drawnow
@@ -339,7 +368,7 @@ covMatrix=exp(-distanceMatrix./lengthcale);
 
 
 %Generate independent normal samples 
-seed=101;
+seed=100;
 rng(seed);
 sample= randn(nX,1);
 

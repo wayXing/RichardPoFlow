@@ -28,12 +28,12 @@ deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthTime=200;
-deltaT=2;
+lengthTime=100;
+deltaT=1;
 nTime=lengthTime/deltaT;
 
 % Iteration solver setup
-nMaxIteration=100;
+nMaxIteration=40;
 maxIteError=0.1;
 
 
@@ -117,6 +117,8 @@ podEnergy=0.99;
 energy=diag(S);
 cumulatedEnergy= cumsum(energy)./sum(energy);
 [~,nPOD]=min(abs(cumulatedEnergy-podEnergy))
+
+% nPOD=80;
 
 V=U(:,1:nPOD);  %call the pod basis V
 
