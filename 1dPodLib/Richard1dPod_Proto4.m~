@@ -23,12 +23,12 @@ function [] = Richard1dPod_Proto4()
 tic
 %% Setup
 % Spatial setup
-lengthZ=200;
-deltaZ=0.1;
+lengthZ=100;
+deltaZ=0.01;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthTime=300;
+lengthTime=200;
 deltaT=1;
 nTime=lengthTime/deltaT;
 
@@ -46,7 +46,7 @@ mesh.nZ=nZ;
 
 
 %%  Permeability field
-scale=0.05;        % overall magnitude of the permeability field. decide the changing speed.
+scale=0.005;        % overall magnitude of the permeability field. decide the changing speed.
 lengthcale=10;     %larger number means less stochastic (more correlation as one zooms in the 
                     %field) field. Thus gives smoother result.
 mesh.Ks=permeabilityField([Z(:)],lengthcale)*scale;
@@ -112,7 +112,7 @@ fomTimeCostFom=toc
 %% POD
 podEnergy=0.999;
 
-disp('POD decomposition process...')
+disp('POD decomposition process')
 [U,S,V]=svd(hRecord,'econ');
 
 % [U,S,V]=svd(H);
@@ -172,14 +172,12 @@ end
 podTimeCostFom=toc  
 
 %% DEIM nonlinear function 
-nDeimK=20;
-nDeimC=20;
+% nDeimK=10;
+% nDeimC=10;
 
-% nDeimK=nPOD;    %number of Deim basis for k term
-% nDeimC=nPOD;    %number of Deim basis for c term
+nDeimK=nPOD;    %number of Deim basis for k term
+nDeimC=nPOD;    %number of Deim basis for c term
 
-%k
-disp('DEIM decomposition for k...')
 for t=1:nTime
     kRecord(:,t)=kFieldFunc(hRecord(:,t),mesh.Ks);
 end
@@ -192,7 +190,6 @@ Vk=Vk(:,1:nDeimK);
 Dk=Vk*inv(Pk'*Vk);  %DEIM basis
 
 %c
-disp('DEIM decomposition for c...')
 cRecord=theataDifFunc(hRecord);
 % [Vc,~,~]=svd(cRecord,'econ');
 [Vc,~,~]=svds(cRecord,nDeimC);

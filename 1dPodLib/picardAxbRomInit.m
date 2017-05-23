@@ -57,12 +57,13 @@ end
     Ar=zeros(nPod,nPod);
     ArBC=zeros(nPod,nPod);
     
+    %k related terms
     for i=1:nDeimK  %ONLY allow for nDeimK=nDeimC
         %loop can be replaced using tensor product.see note.
        
         %ArV means Ar's basis V. a matrix basis.
         centerDiagRVPart1(:,i)= (2.*Vk(:,i)+ lowShift1Eye*Vk(:,i)+UpShift1Eye*Vk(:,i))./(2*deltaZ^2);
-        centerDiagRVPart2(:,i)= Vc(:,i);
+%         centerDiagRVPart2(:,i)= Vc(:,i);
         upDiagR(:,i)          = (Vk(:,i)   + lowShift1Eye*Vk(:,i))                    ./(-2*deltaZ^2);
         downDiagR(:,i)        = (Vk(:,i)   + UpShift1Eye*Vk(:,i))                     ./(-2*deltaZ^2);
           
@@ -75,7 +76,7 @@ end
         Ark(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart1(:,i),0,nZ,nZ)              *P'*P*Vh...       
                     +Vh'*P'*P*spdiags(upDiagR(:,i)          ,0,nZ,nZ)*lowShift1Eye *P'*P*Vh...
                     +Vh'*P'*P*spdiags(downDiagR(:,i)        ,0,nZ,nZ)*UpShift1Eye  *P'*P*Vh;    %Ar k related part
-        Arc(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)              *P'*P*Vh;    %Ar c related part     
+%         Arc(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)              *P'*P*Vh;    %Ar c related part     
                        
         %Ar=Ar+Ark(:,:,i).*Zk(i) +Arc(:,:,i).*Zc(i)./deltaT;
                 
@@ -88,23 +89,33 @@ end
         ArBCk(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart1(:,i),0,nZ,nZ)              *Pwave'*Pwave*Vh...       
                       +Vh'*P'*P*spdiags(upDiagR(:,i)          ,0,nZ,nZ)*lowShift1Eye *Pwave'*Pwave*Vh...
                       +Vh'*P'*P*spdiags(downDiagR(:,i)        ,0,nZ,nZ)*UpShift1Eye  *Pwave'*Pwave*Vh;      %ArBC k related part
-        ArBCc(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)              *Pwave'*Pwave*Vh;      %ArBC c related part 
+%         ArBCc(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)              *Pwave'*Pwave*Vh;      %ArBC c related part 
                 
         %ArBC=Ar+ArBCk(:,:,i).*Zk(i) +ArBCc(:,:,i).*Zc(i)        
         
     end
     
+    %c related terms
+    for i=1:nDeimC
+        centerDiagRVPart2(:,i)= Vc(:,i);
+        Arc(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)              *P'*P*Vh;              %Ar   c related part     
+        ArBCc(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)            *Pwave'*Pwave*Vh;      %ArBC c related part 
+    end
+    
+    
+    
+    
+    
+    
+    
     %% form B vector basis     
     
-    Brk=Vh'*P'*P * -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk;
-    
+    %Br=Brk*Zk;
+    Brk=Vh'*P'*P * -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk;   
     %This structure allows POD and DEIM have different number of basis.
     
-    %Br=Brk*Zk;
-    
     for i=1:size(Vh,2)  %number of pod basis
-       Brhc(:,:,i)=Vh'*P'*P*spdiags(Vh(:,i),0,nZ,nZ)*Vc;
-       
+       Brhc(:,:,i)=Vh'*P'*P*spdiags(Vh(:,i),0,nZ,nZ)*Vc;       
 %        Br         = Br +Brhc(:,:,i)*previousZh(i)*Zc./deltaT;
     end
     

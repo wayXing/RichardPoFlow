@@ -24,14 +24,30 @@ nDeimC=romMesh.nDeimC;
 Ar=zeros(nPod,nPod);
 ArBC=zeros(nPod,nPod);
 
-%Ar matrix
+%Ar matrix 
+% for i=1:nDeimK
+% 
+%     Ar= Ar+romMesh.Ark(:,:,i).*Zk(i) +romMesh.Arc(:,:,i).*Zc(i)./deltaT;
+%     
+%     ArBC= ArBC+romMesh.ArBCk(:,:,i).*Zk(i) +romMesh.ArBCc(:,:,i).*Zc(i)./deltaT;        
+% 
+% end
+
+%Ar matrix k related term
 for i=1:nDeimK
-
-    Ar= Ar+romMesh.Ark(:,:,i).*Zk(i) +romMesh.Arc(:,:,i).*Zc(i)./deltaT;
-    
-    ArBC= ArBC+romMesh.ArBCk(:,:,i).*Zk(i) +romMesh.ArBCc(:,:,i).*Zc(i)./deltaT;        
-
+    Ar  = Ar   +romMesh.Ark(:,:,i).*Zk(i);
+    ArBC= ArBC +romMesh.ArBCk(:,:,i).*Zk(i);        
 end
+
+%Ar matrix c related term
+for i=1:nDeimC
+    Ar  = Ar   +romMesh.Arc(:,:,i).*Zc(i)./deltaT;
+    ArBC= ArBC +romMesh.ArBCc(:,:,i).*Zc(i)./deltaT;        
+end
+
+
+
+
 
 %Br matrix
 Br=romMesh.Brk*Zk;

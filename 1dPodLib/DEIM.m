@@ -1,5 +1,20 @@
 function [phi,Uu,P] = DEIM(U)
-
+%DEIM process to find the P.
+%See Demo file on how to use.
+%
+% Input parameters:
+%
+% Output parameters:
+%
+% Examples:
+%
+% Reference:
+%
+% See also: 
+% Author:   Wei Xing
+% History:  ??/??/2016  file created
+%           23/05/2017  add sparse P
+%%
     [n,m]=size(U);
 
     [rho,phi_1] = max(abs(U(:,1)));
@@ -18,4 +33,7 @@ function [phi,Uu,P] = DEIM(U)
         P = [P,P_i];
         phi = [phi; phi_i];
     end
+    
+    P=sparse(P);
+    
 end
