@@ -39,8 +39,8 @@ deltaTime=1;
 nTime=lengthTime/deltaTime;
 
 % Iteration solver setup
-nMaxIteration=1000;
-miniIteError=0.1;
+nMaxIteration=100;
+miniIteError=1;
 
 
 %% Initialize mesh

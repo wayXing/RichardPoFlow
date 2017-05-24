@@ -21,7 +21,7 @@ function [  ] = Richard1Dv27()
 
 tic
 %% Grid structure Initial
-lengthZ=40;
+lengthZ=1000;
 deltaZ=1;
 
 nZ=lengthZ/deltaZ+1;    %number of Z index total 
@@ -60,7 +60,7 @@ Ks=permeabilityField(Z)*0.01;
 
 
 %% solver setup
-lengthTime=360;
+lengthTime=300;
 deltaTime=1;
 nTime=lengthTime/deltaTime+1;
 

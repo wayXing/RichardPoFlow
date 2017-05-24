@@ -5,7 +5,8 @@ function [] = Richard1dPod_Proto4()
 % project.
 % Proto1: created from Richard1d_Demo3() show experiment 1d POD method.
 % Proto2: take away function picardUpdate and use 1dPodLib
-% Proto3: created from Proto3. This script runs true DEIM POD
+% Proto3: created from Proto3 to make DEIM POD
+% Proto4: created from Proto3. This script runs true DEIM POD
 %
 % Input parameters:
 %
@@ -38,7 +39,7 @@ nMaxIteration=50;
 maxIteError=1;
 
 %
-podEnergy=0.999;
+podEnergy=0.995;
 
 %nDeim
 % nDeimK=30;
@@ -128,7 +129,7 @@ nIterationFom
 
 %% POD
 % podEnergy=0.999;
-hSnapShot=hRecord;
+hSnapShot=hRecord(:,:);
 
 disp('POD decomposition process...')
 [U,S,V]=svd(hSnapShot,'econ');
@@ -138,8 +139,8 @@ energy=diag(S);
 cumulatedEnergy= cumsum(energy)./sum(energy);
 [~,nPOD]=min(abs(cumulatedEnergy-podEnergy))
 
-% nPOD=10;
-
+% nPOD=80;
+% U=U*sqrt(S);
 V=U(:,1:nPOD);  %call the pod basis V
 
 
@@ -292,8 +293,18 @@ for t=1:1:nTime
     title(sprintf('time=%i',t))
     drawnow
     frame(t)=getframe;
-
 end
+
+% figure(2)
+% for t=1:1:nTime
+%     plot(V'*hRecord(:,t))
+%     hold on 
+%     plot(ZhRecord(:,t))
+%     hold off
+%     title(sprintf('ROM coifficients compare time=%i',t))
+%     drawnow
+%     frame(t)=getframe;
+% end
 
 
   
@@ -368,7 +379,7 @@ covMatrix=exp(-distanceMatrix./lengthcale);
 
 
 %Generate independent normal samples 
-seed=100;
+seed=103;
 rng(seed);
 sample= randn(nX,1);
 

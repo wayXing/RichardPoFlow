@@ -10,6 +10,7 @@ function Ks=permeabilityField(X,lengthcale)
 %   lengthcale      -larger number means less stochastic field. Thus less smooth.
 % Output parameters:
 %   Ks              -[n * 1] matrix
+%   type
 %
 % Examples: see Demo
 %

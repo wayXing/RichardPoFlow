@@ -119,7 +119,7 @@ cumulatedEnergy= cumsum(energy)./sum(energy);
 [~,nPOD]=min(abs(cumulatedEnergy-podEnergy))
 
 % nPOD=80;
-
+% U=U*sqrt(S);
 V=U(:,1:nPOD);  %call the pod basis V
 
 
