@@ -30,7 +30,7 @@ deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthTime=200;
+lengthTime=100;
 deltaT=1;
 nTime=lengthTime/deltaT;
 
@@ -59,6 +59,7 @@ mesh.nZ=nZ;
 
 %%  Permeability field
 scale=0.05;        % overall magnitude of the permeability field. decide the changing speed.
+scale=0.0094; %recommand  
 lengthcale=1;     %larger number means less stochastic (more correlation as one zooms in the 
                     %field) field. Thus gives smoother result.
                     

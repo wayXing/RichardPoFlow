@@ -6,7 +6,7 @@ function [] = Richard1dUQ_Proto1()
 % This function serves as a Demo for all Richard solver developed in this
 % project.
 % Proto1: Runs FOM only. It compares results to show if the KL-decomposition
-% works well.
+% works well. only one sample.
 %
 % Input parameters:
 %
@@ -26,7 +26,7 @@ deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthTime=400;
+lengthTime=300;
 deltaT=1;
 nTime=lengthTime/deltaT;
 
@@ -50,8 +50,9 @@ mesh.dbcFlag(end)=1;
 
 
 %% Define and Decompose the permeability field
-scale=0.05;  
-lengthcale=lengthZ/4; %larger number means less stochastic (more correlation as one zooms in the 
+% scale=0.05;  
+scale=0.0094; %recommand  
+lengthcale=lengthZ/10; %larger number means less stochastic (more correlation as one zooms in the 
                       %field) field. Thus gives smoother result.
 
 [Z] = ndgrid(0:deltaZ:lengthZ);
@@ -77,7 +78,7 @@ covMatrix=exp(-distanceMatrix./lengthcale);
 sample= randn(nX,1);
 
 %% Make permeability field
-klEnergyKeep=0.9;
+klEnergyKeep=0.95;
 
 % [U,S,V]=svd(H);
 KlEnergy=diag(klEigenValue);
@@ -190,14 +191,25 @@ nIterationFom
 
 %% Plot
 figure(1)
+plot(Ks)
+hold on 
+plot(Ksr)
+hold off
+title(sprintf('permeability field'))
+legend('All KL basis','Truncation KL basis')
+
+
+
+figure(2)
 for t=1:1:nTime
     plot(hRecord1(:,t))
     hold on 
     plot(hRecord2(:,t))
     hold off
     title(sprintf('time=%i',t))
+%     legend('All KL basis','Truncation KL basis')
     drawnow
-    frame(t)=getframe;
+%     frame(t)=getframe;
 end
 
 
