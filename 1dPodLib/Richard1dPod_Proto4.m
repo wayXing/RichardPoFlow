@@ -30,7 +30,7 @@ deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthTime=100;
+lengthTime=300;
 deltaT=1;
 nTime=lengthTime/deltaT;
 

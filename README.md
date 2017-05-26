@@ -20,8 +20,8 @@ Efficiency is not the priority and further vectorization is required if code eff
 * Cons: very slow! No vectorization/parallelization.
 
 ## Ongoing code
-- [ ] 1D case with POD
-- [ ] 1D case with POD-DEIM
+- [x] 1D case with POD
+- [x] 1D case with POD-DEIM
 
 ## Further developments
 - [ ] data driven surrogate

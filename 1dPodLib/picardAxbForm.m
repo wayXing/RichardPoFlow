@@ -102,10 +102,10 @@ B          = -(UpShift1Eye*K-lowShift1Eye*K)/(2*deltaZ)+previousH.*C/deltaT;
 %% Picking up the unknown free node
 iMethod=1;
 switch iMethod
-    case 1    
+    case 1    %fast 
         B=B(nodeIndex)-A_all(nodeIndex,dbcIndex)*mesh.H(dbcIndex);
         A=A_all(nodeIndex,nodeIndex);
-    case 2
+    case 2    %not as fast as 1 but proper vectorizing
         Pwave=spdiags(mesh.dbcFlag,0,nZ,nZ);    %Picking up matrix. maybe useful
         P    =spdiags(~mesh.dbcFlag,0,nZ,nZ);    %Picking up matrix. maybe useful
         

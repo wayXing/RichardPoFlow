@@ -151,8 +151,12 @@ end
     romMesh.mBrk=reshape(Brk,[],nDeimK);
     romMesh.mBrhc=reshape(Brhc,[],nPod);
     
+    romMesh.Vh=Vh;
+    romMesh.Zh=Vh'*mesh.H;
+    romMesh.Ks=mesh.Ks;
     
-    
+%     romMesh.Pk=Pk;
+%     romMesh.Pc=Pc;
     
 %     romMesh.Brhc2=Brhc;
     

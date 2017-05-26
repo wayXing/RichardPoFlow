@@ -1,6 +1,8 @@
 function [Ar,Br]=picardAxbFormDr(mesh,previousZh,deltaT,Vh,Zh,Vk,Zk,Vc,Zc)
 %calculate linear system equation Ax=B using Picards scheme with dimension
 %reduction DEMI.
+%This is not a practical function but very useful for understanding the
+%program.
 %
 % Input parameters:
 %   mesh             -mseh structure 
