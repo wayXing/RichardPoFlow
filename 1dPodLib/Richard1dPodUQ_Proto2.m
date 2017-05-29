@@ -192,15 +192,14 @@ close(h)
 h=waitbar(0,'Deim pod on Ks on progress');
 for i=1:nSample
     % Initilize ROM
-    mesh.Ks=Ks(:,i);
-    [romMesh]=picardAxbRomInit(mesh,V_uq(:,:,i),Dk_uq(:,:,i),Dc_uq(:,:,i));
-    
     Pk=sparse(PkiRow_uq(:,i),iColume,ones(nDeimK,1),nZ,nDeimK);     %recovery
     Pc=sparse(PciRow_uq(:,i),iColume,ones(nDeimC,1),nZ,nDeimC);     %recovery
+    mesh.Ks=Ks(:,i);
     
-
+    [romMesh]=picardAxbRomInit(mesh,V_uq(:,:,i),Dk_uq(:,:,i),Pk,Dc_uq(:,:,i),Pc);
+    
     tic
-    [H_pod,iteration2] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K,Pk,Pc);
+    [H_pod,iteration2] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
     
     tCost2(i,1)=toc;
     iTera2(i,2)=sum(iteration2);

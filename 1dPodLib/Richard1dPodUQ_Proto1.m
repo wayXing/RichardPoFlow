@@ -151,7 +151,7 @@ end
 [~,~,Pk] = DEIM(Vk);
 Pk=Pk(:,1:nDeimK);
 Vk=Vk(:,1:nDeimK);
-Dk=Vk*inv(Pk'*Vk);  %DEIM basis
+VdK=Vk*inv(Pk'*Vk);  %DEIM basis
 
 %c
 disp('DEIM decomposition for c...')
@@ -162,14 +162,14 @@ cRecord=theataDif(hSnapShot);
 [~,~,Pc] = DEIM(Vc);
 Pc=Pc(:,1:nDeimC);
 Vc=Vc(:,1:nDeimC);
-Dc=Vc*inv(Pc'*Vc);  %DEIM basis
+VdC=Vc*inv(Pc'*Vc);  %DEIM basis
 
 %% Deim POD
 % Initilize ROM
-[romMesh]=picardAxbRomInit(mesh,V,Dk,Dc);
+[romMesh]=picardAxbRomInit(mesh,V,VdK,Pk,VdC,Pc);
 
 tic
-[H_pod,iteration2] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K,Pk,Pc);
+[H_pod,iteration2] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
 podTimeCostFom1=toc  
 nIterationFom1=sum(iteration1)
 

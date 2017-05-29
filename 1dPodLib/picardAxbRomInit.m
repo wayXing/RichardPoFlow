@@ -1,16 +1,18 @@
-function [romMesh]=picardAxbRomInit(mesh,Vh,Vk,Vc)
+function [romMesh]=picardAxbRomInit(mesh,Vh,VdK,Pk,VdC,Pc)
 %Initilize Picard iteration using DEIM ROM
 %on the 1d h-based Richards equation
 %
 % Input parameters:
 %   mesh             -mseh structure 
 %   Vh               -basis for presure head.
-%   Vk               -basis for k term using Deim. normally called Dk and 
+%   VdK              -deim basis for k term using Deim. normally called Dk and 
 %                     calculted by Dk=Vk*inv(Pk'*Vk); where Vk is the pod
 %                     basis and Pk is the pick up matrix 
-%   Vc               -basis for c term using Deim. normally called Dc and 
+%   Pk               -Pickup matrix comes with VdK using Deim
+%   VdC              -deim basis for c term using Deim. normally called Dc and 
 %                     calculted by Dc=Vc*inv(Pc'*Vc); where Vc is the pod
 %                     basis and Pc is the pick up matrix 
+%   Pc               -Pickup matrix comes with VdK using Deim
 % Output parameters:
 %  romMesh           -reduced order mesh with its special structure
 %
@@ -35,9 +37,14 @@ P    =spdiags(~mesh.dbcFlag,0,nZ,nZ);    %Picking up matrix of free nodel
 Pwave( ~any(Pwave,2), : ) = [];  %remove zero rows
 P(~any(P,2), : )          = [];  %remove zero rows
 
-nDeimK=size(Vk,2);
-nDeimC=size(Vc,2);
+nDeimK=size(VdK,2);
+nDeimC=size(VdC,2);
 nPod  =size(Vh,2);
+
+Pk=sparse(logical(Pk));
+Pc=sparse(logical(Pc));
+%%
+
 
 %% form shift matrix. This matrix is not always needed, Depends on the method.
 iMethod=1;
@@ -66,10 +73,10 @@ end
         %loop can be replaced using tensor product.see note.
        
         %ArV means Ar's basis V. a matrix basis.
-        centerDiagRVPart1(:,i)= (2.*Vk(:,i)+ lowShift1Eye*Vk(:,i)+UpShift1Eye*Vk(:,i))./(2*deltaZ^2);
+        centerDiagRVPart1(:,i)= (2.*VdK(:,i)+ lowShift1Eye*VdK(:,i)+UpShift1Eye*VdK(:,i))./(2*deltaZ^2);
 %         centerDiagRVPart2(:,i)= Vc(:,i);
-        upDiagR(:,i)          = (Vk(:,i)   + lowShift1Eye*Vk(:,i))                    ./(-2*deltaZ^2);
-        downDiagR(:,i)        = (Vk(:,i)   + UpShift1Eye*Vk(:,i))                     ./(-2*deltaZ^2);
+        upDiagR(:,i)          = (VdK(:,i)   + lowShift1Eye*VdK(:,i))                    ./(-2*deltaZ^2);
+        downDiagR(:,i)        = (VdK(:,i)   + UpShift1Eye*VdK(:,i))                     ./(-2*deltaZ^2);
           
         %Ar matrix part 1. It consists of (length(Zk)) basis matrix. 
 %         ArV(:,:,i)=  Vh'*P'*P*spdiags(centerDiagRVPart1(:,i),0,nZ,nZ)              *P'*P*Vh .*Zk(i)...
@@ -101,7 +108,7 @@ end
     
     %c related terms
     for i=1:nDeimC
-        centerDiagRVPart2(:,i)= Vc(:,i);
+        centerDiagRVPart2(:,i)= VdC(:,i);
         Arc(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)              *P'*P*Vh;              %Ar   c related part     
         ArBCc(:,:,i) = Vh'*P'*P*spdiags(centerDiagRVPart2(:,i),0,nZ,nZ)            *Pwave'*Pwave*Vh;      %ArBC c related part 
     end
@@ -115,11 +122,11 @@ end
     %% form B vector basis     
     
     %Br=Brk*Zk;
-    Brk=Vh'*P'*P * -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*Vk;   
+    Brk=Vh'*P'*P * -(UpShift1Eye-lowShift1Eye)./(2*deltaZ)*VdK;   
     %This structure allows POD and DEIM have different number of basis.
     
     for i=1:size(Vh,2)  %number of pod basis
-       Brhc(:,:,i)=Vh'*P'*P*spdiags(Vh(:,i),0,nZ,nZ)*Vc;       
+       Brhc(:,:,i)=Vh'*P'*P*spdiags(Vh(:,i),0,nZ,nZ)*VdC;       
 %        Br         = Br +Brhc(:,:,i)*previousZh(i)*Zc./deltaT;
     end
     
@@ -130,7 +137,7 @@ end
     %%Take away BC point in ROM  
     %Br =   Br- Ar2*Zh;
     
-    
+    %TODO the following structure could be improve to save memory storage.
     %% Save rom model
     romMesh.Ark=Ark;
     romMesh.Arc=Arc;
@@ -159,8 +166,8 @@ end
     romMesh.Zh=Vh'*mesh.H;
     romMesh.Ks=mesh.Ks;
     
-%     romMesh.Pk=Pk;
-%     romMesh.Pc=Pc;
+    romMesh.Pk=Pk;      %this oculd be easily compressed
+    romMesh.Pc=Pc;  
     
 %     romMesh.Brhc2=Brhc;
     

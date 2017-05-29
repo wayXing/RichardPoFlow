@@ -1,4 +1,4 @@
-function [H,iteration] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K,Pk,Pc)
+function [H,iteration] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K)
 % solve Richards equation in 1d with picard iteration.
 % the Boundary condition should be included in the Mesh.
 %
@@ -20,12 +20,11 @@ iteration=ones(nTime,1).*nMaxIteration;
 
 
 %% Main
-
 VhTVh=Vh'*Vh;
 Zh=romMesh.Zh;
 
-% Pk=romMesh.Pk;
-% Pc=romMesh.Pc;
+Pk=romMesh.Pk;
+Pc=romMesh.Pc;
 
 PkVh=Pk'*Vh;
 PcVh=Pc'*Vh;

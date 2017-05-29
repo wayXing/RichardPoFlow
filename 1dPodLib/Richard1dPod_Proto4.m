@@ -20,6 +20,7 @@ function [] = Richard1dPod_Proto4()
 % See also: 
 % Author:   Wei Xing
 % History:  22/05/2017  file created
+%           29/05/2017  new function structure
 %
 clear
 close all
@@ -239,7 +240,7 @@ mesh.K=kFieldFunc(mesh.H,mesh.Ks);
 nodeIndex=find(~mesh.dbcFlag);   %specify free node index   
 
 %Initialize ROM
-[romMesh]=picardAxbRomInit(mesh,V,Dk,Dc);
+[romMesh]=picardAxbRomInit(mesh,V,Dk,Pk,Dc,Pc);
 
 VTV=V'*V;
 Zh=V'*mesh.H;
