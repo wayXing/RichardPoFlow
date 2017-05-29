@@ -103,7 +103,6 @@ Ks =exp(klBasis*sqrt(klEigenValue)*sample).*scale;
 Ksr=exp(klBasis(:,1:nKl)*sqrt(klEigenValue(1:nKl,1:nKl))*sample(1:nKl,1)).*scale;
 
 
-mesh.Ks=Ks;
 %% FOM on K
 mesh.Ks=Ks;
 

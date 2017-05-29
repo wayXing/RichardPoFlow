@@ -89,7 +89,9 @@ cumulatedKlEnergy= cumsum(KlEnergy)./sum(KlEnergy);
 Ks =exp(klBasis*sqrt(klEigenValue)*sample).*scale;
 Ksr=exp(klBasis(:,1:nKl)*sqrt(klEigenValue(1:nKl,1:nKl))*sample(1:nKl,1)).*scale;
 
-
+% scale=0.000094;
+% Ks =exp(klBasis*sqrt(klEigenValue)*sample+scale);
+% Ksr=exp(klBasis(:,1:nKl)*sqrt(klEigenValue(1:nKl,1:nKl))*sample(1:nKl,:)+scale);
 
 %% Define non-linear function 
 theata_s=0.287;

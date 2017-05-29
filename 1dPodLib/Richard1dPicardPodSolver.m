@@ -15,6 +15,10 @@ function [H,iteration] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxItera
 %% Auxiliary variable
 Vh=romMesh.Vh;
 
+%% Initialize
+iteration=ones(nTime,1).*nMaxIteration;
+
+
 %% Main
 
 VhTVh=Vh'*Vh;

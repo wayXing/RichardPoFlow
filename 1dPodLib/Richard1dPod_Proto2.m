@@ -23,11 +23,11 @@ tic
 %% Setup
 % Spatial setup
 lengthZ=100;
-deltaZ=1;
+deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthTime=3000;
+lengthTime=300;
 deltaT=1;
 nTime=lengthTime/deltaT;
 
@@ -49,7 +49,7 @@ scale=0.005;        % overall magnitude of the permeability field. decide the ch
 lengthcale=10;     %larger number means less stochastic (more correlation as one zooms in the 
                     %field) field. Thus gives smoother result.
 mesh.Ks=permeabilityField([Z(:)],lengthcale)*scale;
-
+% mesh.Ks=ones(length(Z),1)*scale;
 
 %% initial conditions and boundary value (DBC)
 h_init=ones(nZ,1)*-61.5; %value for all initial points

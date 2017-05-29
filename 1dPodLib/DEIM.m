@@ -34,6 +34,6 @@ function [phi,Uu,P] = DEIM(U)
         phi = [phi; phi_i];
     end
     
-    P=sparse(P);
+    P=sparse(logical(P));
     
 end

@@ -79,6 +79,7 @@ covMatrix=exp(-distanceMatrix./lengthcale);    %calculate covariance matrix
 
 disp('KL decomposition on process...')
 [nX,dimX]=size(Z);
+
 nX=50;
 [klBasis,klEigenValue,~] = svds(covMatrix,nX);  % KL decomposition on covariance matrix via SVD/eigen decomposition
 % Vkl=klBasis*sqrt(klEigenValue);
@@ -116,6 +117,8 @@ nIterationFom1=sum(iteration1)
 %% Prepare stage 
 % POD
 podEnergyKeep=0.995;
+% podEnergyKeep=0.9999;
+
 hSnapShot=H_fom(:,:);   %decide snapshot
 
 disp('POD decomposition process...')
@@ -126,7 +129,7 @@ energy=diag(S);
 cumulatedPodEnergy= cumsum(energy)./sum(energy);
 [~,nPod]=min(abs(cumulatedPodEnergy-podEnergyKeep))
 
-% nPOD=80;
+% nPod=40;
 % U=U*sqrt(S);
 V=U(:,1:nPod);  %call the pod basis V
 
@@ -161,7 +164,8 @@ Pc=Pc(:,1:nDeimC);
 Vc=Vc(:,1:nDeimC);
 Dc=Vc*inv(Pc'*Vc);  %DEIM basis
 
-%% Initilize ROM
+%% Deim POD
+% Initilize ROM
 [romMesh]=picardAxbRomInit(mesh,V,Dk,Dc);
 
 tic
