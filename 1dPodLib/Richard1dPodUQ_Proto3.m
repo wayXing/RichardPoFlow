@@ -1,4 +1,4 @@
-function [] = Richard1dPodUQ_Proto2()
+function [] = Richard1dPodUQ_Proto3()
 % UQ for Richars equation with random input 
 %
 % Richars equation 1D pod solver testing file.
@@ -8,7 +8,7 @@ function [] = Richard1dPodUQ_Proto2()
 % Proto1: introduce deim pod solver as a function. Also using
 %         inline function to describe non-linear term.
 % Proto2: created from Proto1 and Richard1dUQ_Proto3. Batch UQ inout field
-%         for 1d Pod with independent ideal basis.
+%         for 1d Pod with global basis.
 %
 % Input parameters:
 %
@@ -19,26 +19,16 @@ function [] = Richard1dPodUQ_Proto2()
 % Author:   Wei Xing
 % History:  29/05/2017  file created
 %
-% tips:     -Ks with higher randomness would lead to highly variate result
-%           and thus unstable results for pod.
-%           -Long time simulation sould lead to unstable results. (evolved
-%            basis would be required/Very large number of basis)
-%           -Long time pod simulation most fails at the begining. start with
-%           Fom then switch to FOM would help stabalize.  
-%           -Fine grid e.g. deltaZ=0.01 would show significant cpu saving.
-
-
-%
 clear
 close all
 %% Solver Setup
 % Spatial setup
 lengthZ=100;
-deltaZ=0.1;
+deltaZ=0.01;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthT=200;
+lengthT=300;
 deltaT=1;
 nTime=lengthT/deltaT;
 % tStep=1:deltaT:lengthTime;
@@ -80,10 +70,9 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 
 %% Define and Decompose the permeability input field
 % scale=0.05;  
-nKl=50;
-scale=0.0094;            %recommand value from paper 
-lengthcale=0.75*lengthZ; %larger number means less stochastic (more correlation as one zooms in the 
-                         %field) field. Thus gives smoother result.
+scale=0.0094;          %recommand value from paper 
+lengthcale=2*lengthZ; %larger number means less stochastic (more correlation as one zooms in the 
+                       %field) field. Thus gives smoother result.
               
 [Z] = ndgrid(0:deltaZ:lengthZ);
 %calculate distance matrix
@@ -93,10 +82,10 @@ distanceMatrix = squareform(distance);
 covMatrix=exp(-distanceMatrix./lengthcale);    %calculate covariance matrix
 
 [nX,dimX]=size(Z);
-% nKl=nX;
+nX=50;
 
 disp('KL decomposition for Ks...')
-[klBasis,klEigenValue,~] = svds(covMatrix,nKl);  % KL decomposition on covariance matrix via SVD/eigen decomposition
+[klBasis,klEigenValue,~] = svds(covMatrix,nX);  % KL decomposition on covariance matrix via SVD/eigen decomposition
 % Vkl=klBasis*sqrt(klEigenValue);
 
 %a log (multi) normal permeability field
@@ -108,7 +97,7 @@ disp('KL decomposition for Ks...')
 nSample=30;
 % klEnergyKeep=0.95;
 
-sample= randn(nKl,nSample);        %Random cofficient Sampling. Also the input in this case.
+sample= randn(nX,nSample);        %Random cofficient Sampling. Also the input in this case.
 % [U,S,V]=svd(H);
 % KlEnergy=diag(klEigenValue);
 % cumulatedKlEnergy= cumsum(KlEnergy)./sum(KlEnergy);
@@ -135,81 +124,67 @@ end
 close(h)
 
 %% Prepare stage 
-% POD
+% global POD
 % podEnergyKeep=0.995;
 nPod=40;
    
-h=waitbar(0,'independent Pod and Deimon K&C on progress');
-for i=1:nSample    
-    hSnapShot=H_uq1(:,:,i);   %decide snapshot
 
-   
+hSnapShot=reshape(H_uq1,nZ,[]);   %decide snapshot
+
+
 %     [U,S,~]=svd(hSnapShot,'econ');
 %     energy=diag(S);
 %     cumulatedPodEnergy= cumsum(energy)./sum(energy);
 %     [~,nPod]=min(abs(cumulatedPodEnergy-podEnergyKeep))
 %     % U=U*sqrt(S);
 %     V(:,:,i)=U(:,1:nPod);  %call the pod basis V
-    
-    [V_uq(:,:,i),S,~]=svds(hSnapShot,nPod);
-    
 
-    % DEIM nonlinear function 
+[V_uq,S,~]=svds(hSnapShot,nPod);
 
-    % nDeimK=100;
-    % nDeimC=100;
-    nDeimK=nPod;    %number of Deim basis for k term
-    nDeimC=nPod;    %number of Deim basis for c term
 
-    %k
+% DEIM nonlinear function 
+
+% nDeimK=100;
+% nDeimC=100;
+nDeimK=nPod;    %number of Deim basis for k term
+nDeimC=nPod;    %number of Deim basis for c term
+
+%k
 %     disp('DEIM decomposition for k...')
-    for t=1:size(hSnapShot,2)
-        kRecord(:,t)=K(hSnapShot(:,t),Ks(:,i));
-    end
-    % [Vk,~,~]=svd(kRecord,'econ');
-    [Vk,~,~]=svds(kRecord,nDeimK);
-
-    [~,~,Pk] = DEIM(Vk);
-    Pk=Pk(:,1:nDeimK);
-    Vk=Vk(:,1:nDeimK);
-    Dk_uq(:,:,i)=Vk*inv(Pk'*Vk);  %DEIM basis
-    
-    %special treatment to store sparse logical matrix Pk
-    [iRow,iColume]=find(Pk);
-    PkiRow_uq(:,i)=iRow;
-%     Pk=sparse(iRow,iColume,ones(nDeimK,1),nZ,nDeimK);     %recovery
-
-    %c
-%     disp('DEIM decomposition for c...')
-    cRecord=theataDif(hSnapShot);
-    % [Vc,~,~]=svd(cRecord,'econ');
-    [Vc,~,~]=svds(cRecord,nDeimC);
-
-    [~,~,Pc] = DEIM(Vc);
-    Pc=Pc(:,1:nDeimC);
-    Vc=Vc(:,1:nDeimC);
-    Dc_uq(:,:,i)=Vc*inv(Pc'*Vc);  %DEIM basis
-
-    %special treatment to store sparse logical matrix Pk
-    [iRow,iColume]=find(Pc);
-    PciRow_uq(:,i)=iRow;
-%     Pc=sparse(iRow,iColume,ones(nDeimC,1),nZ,nDeimC);     %recovery
-    
-    waitbar(i/nSample)
+for t=1:size(hSnapShot,2)
+    kRecord(:,t)=K(hSnapShot(:,t),Ks(:,i));
 end
-close(h)
+% [Vk,~,~]=svd(kRecord,'econ');
+[Vk,~,~]=svds(kRecord,nDeimK);
+
+[~,~,Pk] = DEIM(Vk);
+Pk=Pk(:,1:nDeimK);
+Vk=Vk(:,1:nDeimK);
+VdK_uq=Vk*inv(Pk'*Vk);  %DEIM basis
+
+
+%c
+%     disp('DEIM decomposition for c...')
+cRecord=theataDif(hSnapShot);
+% [Vc,~,~]=svd(cRecord,'econ');
+[Vc,~,~]=svds(cRecord,nDeimC);
+
+[~,~,Pc] = DEIM(Vc);
+Pc=Pc(:,1:nDeimC);
+Vc=Vc(:,1:nDeimC);
+VdC_uq=Vc*inv(Pc'*Vc);  %DEIM basis
+
 
 %% Deim POD
+[romMesh]=picardAxbRomInit(mesh,V_uq,VdK_uq,Pk,VdC_uq,Pc);
+
 h=waitbar(0,'Deim pod on Ks on progress');
 for i=1:nSample
     % Initilize ROM
-    Pk=sparse(PkiRow_uq(:,i),iColume,ones(nDeimK,1),nZ,nDeimK);     %recovery
-    Pc=sparse(PciRow_uq(:,i),iColume,ones(nDeimC,1),nZ,nDeimC);     %recovery
-    mesh.Ks=Ks(:,i);
+    romMesh.Ks=Ks(:,i);
     
-%     mesh.H=H_uq1(:,1,i); % use fom to start
-    
-    [romMesh]=picardAxbRomInit(mesh,V_uq(:,:,i),Dk_uq(:,:,i),Pk,Dc_uq(:,:,i),Pc);
+%     mesh.H=H_uq1(:,2,i); % use fom to start
+    romMesh.Zh=V_uq'*H_uq1(:,2,i);
     
     tic
     [H_pod,iteration2] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
@@ -237,9 +212,9 @@ mid_H_uq2=median(H_uq2,3);
 
 
 %% show basis
-v1=reshape(V_uq(:,1,:),nZ,nSample);
-figure(1)
-plot(v1)
+% v1=reshape(V_uq(:,1,:),nZ,nSample);
+% figure(1)
+% plot(v1)
 
 
 
@@ -265,8 +240,7 @@ for t=1:1:nTime
 end
 
 
-nZShow=100;
-zShow=1:round(nZ/nZShow):nZ;
+% zShow=1:1:nZ;
 figure(3)
 for t=1:1:nTime
     figure(3)

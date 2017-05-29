@@ -94,7 +94,8 @@ switch iMethod
 %         end
         
         Br2= romMesh.mBrhc*previousZh;
-        Br2= reshape(Br2,nPod,nPod);
+%         Br2= reshape(Br2,nPod,nPod);
+        Br2= reshape(Br2,nPod,nDeimC);
         Br= Br2*Zc+romMesh.Brk*Zk;
 
         %%Take away BC point in ROM  
