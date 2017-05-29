@@ -4,11 +4,15 @@ function [romMesh]=picardAxbRomInit(mesh,Vh,Vk,Vc)
 %
 % Input parameters:
 %   mesh             -mseh structure 
-%   previousH        -value of mesh.H at last time step
-%   Vh                  
-%
+%   Vh               -basis for presure head.
+%   Vk               -basis for k term using Deim. normally called Dk and 
+%                     calculted by Dk=Vk*inv(Pk'*Vk); where Vk is the pod
+%                     basis and Pk is the pick up matrix 
+%   Vc               -basis for c term using Deim. normally called Dc and 
+%                     calculted by Dc=Vc*inv(Pc'*Vc); where Vc is the pod
+%                     basis and Pc is the pick up matrix 
 % Output parameters:
-%   A,B              -A*mesh.H_new=B;
+%  romMesh           -reduced order mesh with its special structure
 %
 % Examples: see Demo
 %

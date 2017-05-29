@@ -1,14 +1,17 @@
 function [Ar,Br]=picardAxbRomForm(romMesh,deltaT,previousZh,Zh,Zk,Zc)
-%Initilize Picard iteration using DEIM ROM
-%on the 1d h-based Richards equation
+%Form linear system at picards iteration on a initilized reduced order model 
+%using DEIM ROM on the 1d h-based Richards equation
 %
 % Input parameters:
-%   mesh             -mseh structure 
-%   previousH        -value of mesh.H at last time step
-%   Vh                  
+%   romMesh             -initilized reduced order model
+%   deltaT              -
+%   previousZh          -value of Zh at last time step
+%   Zh                  -current Zh
+%   Zk                  -current Zk
+%   Zc                  -current Zc
 %
 % Output parameters:
-%   A,B              -A*mesh.H_new=B;
+%   Ar,Br            -Ar*Zh=Br;
 %
 % Examples: see Demo
 %
@@ -77,9 +80,9 @@ switch iMethod
         Br =   Br- ArBC*Zh;
         
         
-    case 2
-        Ar=romMesh.mArk*Zk+romMesh.mArc*Zc./deltaT;;
-        ArBC=romMesh.mArBCk*Zk+romMesh.mArBCc*Zc./deltaT;;
+    case 2 %vectorize to speed up
+        Ar=romMesh.mArk*Zk+romMesh.mArc*Zc./deltaT;
+        ArBC=romMesh.mArBCk*Zk+romMesh.mArBCc*Zc./deltaT;
         
         Ar=reshape(Ar,nPod,nPod);
         ArBC=reshape(ArBC,nPod,nPod);
