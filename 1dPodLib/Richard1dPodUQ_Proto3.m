@@ -28,7 +28,7 @@ deltaZ=0.01;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthT=300;
+lengthT=200;
 deltaT=1;
 nTime=lengthT/deltaT;
 % tStep=1:deltaT:lengthTime;
@@ -94,7 +94,7 @@ disp('KL decomposition for Ks...')
 % randomCoief= randn(nX,1);
 
 %% Make permeability field
-nSample=30;
+nSample=200;
 % klEnergyKeep=0.95;
 
 sample= randn(nX,nSample);        %Random cofficient Sampling. Also the input in this case.

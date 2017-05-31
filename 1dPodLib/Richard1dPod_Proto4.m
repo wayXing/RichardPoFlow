@@ -27,7 +27,7 @@ close all
 %% Setup
 % Spatial setup
 lengthZ=100;
-deltaZ=0.1;
+deltaZ=0.01;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
@@ -233,7 +233,7 @@ Dc=Vc*inv(Pc'*Vc);  %DEIM basis
 %% DEIM POD
 %initilize system.
 mesh.H=h_init;
-mesh.H=hRecord2(:,2);   %try start with Fom
+mesh.H=hRecord2(:,2);   % start with Fom/ This improve Stability!!!
 
 
 mesh.C=theataDifFunc(mesh.H);
@@ -289,7 +289,7 @@ nIterationDeimPod
 
 %% Plot
 figure(1)
-for t=1:1:nTime
+for t=1:10:nTime
     plot(hRecord(:,t))
     hold on 
     plot(hRecord2(:,t))
