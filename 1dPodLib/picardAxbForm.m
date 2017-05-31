@@ -1,8 +1,10 @@
 function [A,B]=picardAxbForm(mesh,previousH,deltaT)
-%calculate linear system equation Ax=B using Picards scheme.
+%calculate linear system equation Ax=B using Picards scheme for 1d h-based
+%Richards equation.
 % Input parameters:
 %   mesh             -mseh structure 
 %   previousH        -value of mesh.H at last time step
+%   deltaT           -time step
 % Output parameters:
 %   A,B              -A*mesh.H_new=B;
 %
