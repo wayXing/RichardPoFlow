@@ -298,7 +298,8 @@ end
     
                 end   
                 
-                cCenter=C(iZ,1);   
+%                 cCenter=C(iZ,1);  %TODO Check. This should be wrong
+                cCenter=C(iZ,iX);  
 
                 wUp   = -kHalfUp  ./deltaZ^2;
                 wDown = -kHalfDown./deltaZ^2;
