@@ -1,11 +1,12 @@
 # RichardPoFlow
 Richards equation on porous media
-using finite difference
+using finite difference scheme.
 
-This project aims to solve ground flow problems (based on Richard's equation on heterogeneous field.)
+This project aims to solve ground flow problems (based on Richard's equation with heterogeneous field input.)
 
-One of the focus of this project is to develop general surrogate model (both by data driven and projection based reduced order model) to the
-ground flow problems.  
+One focus of this project is to develop general surrogate models (both data-driven and projection based reduced order model). The Richard's equation here also serves as a playground for these surrogate. Thus the code contains low efficient but easily readable version as well as more efficient version with less readability.
+
+**The code is still under develop and not yet to be released.**
 
 
 <!---
@@ -14,15 +15,13 @@ Efficiency is not the priority and further vectorization is required if code eff
 -->
 
 ## Finished code.
-- [x]permeability fild (log-normal) generator based on KL decompositions.
-- [x]Basic code for 1D/2D/3D domain (rectangular grid) with Dirichlet or  Neumann boundary conditions.
-* Proc: easy understanding and modifications
-* Cons: very slow! No vectorization/parallelization.
+- [x] permeability field (log-normal) generator based on KL decompositions.
+- [x] Basic code for 1D/2D/3D domain (rectangular grid) with Dirichlet or  Neumann boundary conditions.
+	* Proc: easy understanding and modifications
+	* Cons: very slow! No vectorization/parallelization is yet developed for 2D/3D problems.
+- [x] POD reduced order model for 1D problem.
+- [x] hyper reduction for POD using discrete empirical interpolation. (for 1D problem).
 
 ## Ongoing code
-- [x] 1D case with POD
-- [x] 1D case with POD-DEIM
-
-## Further developments
-- [ ] data driven surrogate
-- [ ] hybrid surrogate wiht ML
+- [ ] Data driven surrogate
+- [ ] hybrid surrogate combing data-driven and projected based ROM.
