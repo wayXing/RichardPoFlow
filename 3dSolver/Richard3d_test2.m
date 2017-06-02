@@ -186,8 +186,9 @@ toc
 %% Plotting 
 % H=mesh.H;
 
-% figure(1)
-% scatter3(X(:),Y(:),Z(:),Ks(:)*10000,Ks(:)*10000)
+figure(1)
+plot(iteration1)
+title(sprintf('Iteration at each time step'))
 
 % end time pressure
 % figure(2)

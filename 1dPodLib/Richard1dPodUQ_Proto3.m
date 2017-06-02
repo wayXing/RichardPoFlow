@@ -7,7 +7,7 @@ function [] = Richard1dPodUQ_Proto3()
 % project.
 % Proto1: introduce deim pod solver as a function. Also using
 %         inline function to describe non-linear term.
-% Proto2: created from Proto1 and Richard1dUQ_Proto3. Batch UQ inout field
+% Proto3: created from Proto1 and Richard1dUQ_Proto3. Batch UQ inout field
 %         for 1d Pod with global basis.
 %
 % Input parameters:
@@ -35,7 +35,7 @@ nTime=lengthT/deltaT;
 
 
 %Solver iteration setup
-nMaxIteration=70;
+nMaxIteration=50;
 maxIteError=1;
 
 % update mesh structure
@@ -71,7 +71,7 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 %% Define and Decompose the permeability input field
 % scale=0.05;  
 scale=0.0094;          %recommand value from paper 
-lengthcale=2*lengthZ; %larger number means less stochastic (more correlation as one zooms in the 
+lengthcale=1*lengthZ; %larger number means less stochastic (more correlation as one zooms in the 
                        %field) field. Thus gives smoother result.
               
 [Z] = ndgrid(0:deltaZ:lengthZ);
@@ -94,7 +94,7 @@ disp('KL decomposition for Ks...')
 % randomCoief= randn(nX,1);
 
 %% Make permeability field
-nSample=200;
+nSample=10;
 % klEnergyKeep=0.95;
 
 sample= randn(nX,nSample);        %Random cofficient Sampling. Also the input in this case.
@@ -184,7 +184,7 @@ for i=1:nSample
     romMesh.Ks=Ks(:,i);
     
 %     mesh.H=H_uq1(:,2,i); % use fom to start
-    romMesh.Zh=V_uq'*H_uq1(:,2,i);
+    romMesh.Zh=V_uq'*H_uq1(:,1,i);
     
     tic
     [H_pod,iteration2] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);

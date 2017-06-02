@@ -26,6 +26,7 @@ function [] = Richard1dPodUQ_Proto2()
 %           -Long time pod simulation most fails at the begining. start with
 %           Fom then switch to FOM would help stabalize.  
 %           -Fine grid e.g. deltaZ=0.01 would show significant cpu saving.
+%           -Fine grid also improve stability
 
 
 %
@@ -45,7 +46,7 @@ nTime=lengthT/deltaT;
 
 
 %Solver iteration setup
-nMaxIteration=70;
+nMaxIteration=50;
 maxIteError=1;
 
 % update mesh structure
@@ -105,7 +106,7 @@ disp('KL decomposition for Ks...')
 % randomCoief= randn(nX,1);
 
 %% Make permeability field
-nSample=30;
+nSample=20;
 % klEnergyKeep=0.95;
 
 sample= randn(nKl,nSample);        %Random cofficient Sampling. Also the input in this case.
@@ -201,20 +202,27 @@ close(h)
 
 %% Deim POD
 h=waitbar(0,'Deim pod on Ks on progress');
+
+
 for i=1:nSample
+    
     % Initilize ROM
-    Pk=sparse(PkiRow_uq(:,i),iColume,ones(nDeimK,1),nZ,nDeimK);     %recovery
-    Pc=sparse(PciRow_uq(:,i),iColume,ones(nDeimC,1),nZ,nDeimC);     %recovery
+    Pk=sparse(PkiRow_uq(:,i),iColume,ones(nDeimK,1),nZ,nDeimK);     %recovery form storage
+    Pc=sparse(PciRow_uq(:,i),iColume,ones(nDeimC,1),nZ,nDeimC);     %recovery form storage
     mesh.Ks=Ks(:,i);
     
 %     mesh.H=H_uq1(:,1,i); % use fom to start
-    
+    tic 
     [romMesh]=picardAxbRomInit(mesh,V_uq(:,:,i),Dk_uq(:,:,i),Pk,Dc_uq(:,:,i),Pc);
+    
+    tCostPodInit(i,1)=toc;
     
     tic
     [H_pod,iteration2] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
     
+%     tCost2Total(i,1)=toc;
     tCost2(i,1)=toc;
+    
     iTera2(i,2)=sum(iteration2);
     H_uq2(:,:,i)=H_pod;
     
@@ -222,6 +230,8 @@ for i=1:nSample
 end
 close(h)
 
+% tCost2=tCost2Total-tCostPodInit;
+tCost2Total=tCost2+tCostPodInit;
 
 sum(tCost1)
 sum(tCost2)
@@ -236,14 +246,23 @@ var_H_uq2=std(H_uq2,0,3);
 mid_H_uq2=median(H_uq2,3);
 
 
+%% plot
+
 %% show basis
 v1=reshape(V_uq(:,1,:),nZ,nSample);
 figure(1)
 plot(v1)
 
+%show cpu time
+figure(1)
+plot([tCost1,tCost2,tCost2Total]);
+title(sprintf('cpu time cost'))
+legend('fom','pod run time','pod total time (with model building time')
 
 
-%% plot
+
+
+
 figure(2)
 
 nZShow=100;
