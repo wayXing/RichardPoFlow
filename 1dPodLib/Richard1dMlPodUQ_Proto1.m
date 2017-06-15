@@ -1,38 +1,29 @@
 function [] = Richard1dMlPodUQ_Proto1()
-% UQ for Richars equation with random input 
+% UQ for Richars equation with random input using mchaine learning & POD
 %
-% Richars equation 1D deim pod solver with machine learning improvements.
+% Richars equation 1D pod solver testing file.
 % The function focus on fix Dirichlet BC.
+% This function serves as a Demo for all Richard solver developed in this
+% project.
 % 
-% Proto1: Batch UQ inout field. Deim-pod.
-%         ML to learn basis/rom.
+% Proto1: Created form Richard1dPodUQ_Proto3() & Richard1dMlUq_Proto1().
+%         use clissification and local-global POD. No learning yet.
 %
 % Input parameters:
-%3
+%
 % Output parameters:
 %
 % See also: 
 %
 % Author:   Wei Xing
-% History:  02/06/2017  file created
-%
-% tips:     -Ks with higher randomness would lead to highly variate result
-%           and thus unstable results for pod.
-%           -Long time simulation sould lead to unstable results. (evolved
-%            basis would be required/Very large number of basis)
-%           -Long time pod simulation most fails at the begining. start with
-%           Fom then switch to FOM would help stabalize.  
-%           -Fine grid e.g. deltaZ=0.01 would show significant cpu saving.
-%           -Fine grid also improve stability
-
-
+% History:  15/06/2017  file created
 %
 clear
 close all
 %% Solver Setup
 % Spatial setup
 lengthZ=100;
-deltaZ=1;
+deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
@@ -75,45 +66,39 @@ K = @(h,Ks) Ks.*rho./(rho+abs(h).^r);
 
 theata    = @(h)  alpha.*(theata_s-theata_r)/(alpha+abs(h).^beta)+theata_r;
 theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*abs(h).^(beta-1);
+        
+%% Define and Decompose the permeability input field II
+lengthScale=lengthZ*0.2; %larger number means less stochastic (more correlation as one zooms in the 
+nKl=30;
+nSample=20;
 
-%% Define and Decompose the permeability input field
-% scale=0.05;  
-nKl=50;
-scale=0.0094;            %recommand value from paper 
-lengthcale=0.75*lengthZ; %larger number means less stochastic (more correlation as one zooms in the 
-                         %field) field. Thus gives smoother result.
-              
+% KsMean=0.0094;
+% KsVar= (KsMean*0.3)^2;
+
+GaussianMean= log(0.0014);
+GaussianVar = (GaussianMean*0.4)^2;       
+
+
 [Z] = ndgrid(0:deltaZ:lengthZ);
 %calculate distance matrix
 distance = pdist(Z);
 distanceMatrix = squareform(distance);
 
-covMatrix=exp(-distanceMatrix./lengthcale);    %calculate covariance matrix
+covMatrix=exp(-distanceMatrix./lengthScale);    %calculate correlation matrix 
+covMatrix=GaussianVar*covMatrix;                %calculate covariance  matrix 
 
-[nX,dimX]=size(Z);
-% nKl=nX;
-
-disp('KL decomposition for Ks...')
 [klBasis,klEigenValue,~] = svds(covMatrix,nKl);  % KL decomposition on covariance matrix via SVD/eigen decomposition
-% Vkl=klBasis*sqrt(klEigenValue);
 
-%a log (multi) normal permeability field
-%     Ks=exp(klBasis*sqrt(klEigenValue)*sample);
+% Make permeability field
+% sample= randn( size(klBasis,2),1);               %Sampling from a normal distribution
+sample= randn(nKl,nSample);                              %Sampling from a normal distribution
+sample= lhsdesign(nSample,nKl)';                         %Sampling using latin hypercube
 
-% randomCoief= randn(nX,1);
+% sample(1:1,:)=0.5*ones(nSample,1);
 
-%% Make permeability field
-nSample=20;
-% klEnergyKeep=0.95;
+Ks = (klBasis*sqrt(klEigenValue)*sample)+GaussianMean;  %Multivariate Gaussian
+Ks = exp(Ks);                                          
 
-sample= randn(nKl,nSample);        %Random cofficient Sampling. Also the input in this case.
-% [U,S,V]=svd(H);
-% KlEnergy=diag(klEigenValue);
-% cumulatedKlEnergy= cumsum(KlEnergy)./sum(KlEnergy);
-% [~,nKl]=min(abs(cumulatedKlEnergy-klEnergyKeep))
-
-Ks =exp(klBasis*sqrt(klEigenValue)*sample).*scale;
-% Ksr=exp(klBasis(:,1:nKl)*sqrt(klEigenValue(1:nKl,1:nKl))*sample(1:nKl,:)).*scale;
 
 %% FOM on K
 % define non-linear term
@@ -132,94 +117,86 @@ for i=1:nSample
 end
 close(h)
 
-%% Prepare stage 
-% POD
-% podEnergyKeep=0.995;
-nPod=40;
-   
-h=waitbar(0,'independent Pod and Deimon K&C on progress');
-for i=1:nSample    
-    hSnapShot=H_uq1(:,:,i);   %decide snapshot
+%% Clustering
+nCluster=3;
 
-   
-%     [U,S,~]=svd(hSnapShot,'econ');
-%     energy=diag(S);
-%     cumulatedPodEnergy= cumsum(energy)./sum(energy);
-%     [~,nPod]=min(abs(cumulatedPodEnergy-podEnergyKeep))
-%     % U=U*sqrt(S);
-%     V(:,:,i)=U(:,1:nPod);  %call the pod basis V
-    
-    [V_uq(:,:,i),S,~]=svds(hSnapShot,nPod);
-    
+H_uq1Vec=reshape(H_uq1,[],nSample);
+label = kmeans(H_uq1Vec',nCluster);
 
+%% local basis basend on Clusters
+nPod=30;
+
+h=waitbar(0,'Initilizing local ROMs');
+for i=1:nCluster 
+    
+    index=find(label==i);
+    
+    % define snapshot
+    iHSnapShot=reshape(H_uq1(:,:,index),nZ,length(index)*nTime);   %decide snapshot
+    
+    %POD basis
+%     [V_uq(:,:,i),S,~]=svds(iHSnapShot,nPod);
+    [V_uq,S,~]=svds(iHSnapShot,nPod);
+    
     % DEIM nonlinear function 
-
-    % nDeimK=100;
-    % nDeimC=100;
     nDeimK=nPod;    %number of Deim basis for k term
     nDeimC=nPod;    %number of Deim basis for c term
-
+    
     %k
-%     disp('DEIM decomposition for k...')
-    for t=1:size(hSnapShot,2)
-        kRecord(:,t)=K(hSnapShot(:,t),Ks(:,i));
+%     for t=1:size(iHSnapShot,2)
+%         kRecord(:,t)=K(iHSnapShot(:,t),Ks(:,i));
+%     end
+    for j=1:length(index)
+        for t=1:nTime
+            kRecord(:,t,j)=K(H_uq1(:,t,index(j)),Ks(:,index(j)));
+        end  
     end
+    kRecord=reshape(kRecord,nZ,[]);   %decide snapshot
+    
+    
     % [Vk,~,~]=svd(kRecord,'econ');
     [Vk,~,~]=svds(kRecord,nDeimK);
 
     [~,~,Pk] = DEIM(Vk);
     Pk=Pk(:,1:nDeimK);
     Vk=Vk(:,1:nDeimK);
-    Dk_uq(:,:,i)=Vk*inv(Pk'*Vk);  %DEIM basis
+%     VdK_uq(:,:,i)=Vk*inv(Pk'*Vk);  %DEIM basis
+    VdK_uq=Vk*inv(Pk'*Vk);  %DEIM basis
     
-    %special treatment to store sparse logical matrix Pk
-    [iRow,iColume]=find(Pk);
-    PkiRow_uq(:,i)=iRow;
-%     Pk=sparse(iRow,iColume,ones(nDeimK,1),nZ,nDeimK);     %recovery
-
     %c
-%     disp('DEIM decomposition for c...')
-    cRecord=theataDif(hSnapShot);
+    %     disp('DEIM decomposition for c...')
+    cRecord=theataDif(iHSnapShot);
     % [Vc,~,~]=svd(cRecord,'econ');
     [Vc,~,~]=svds(cRecord,nDeimC);
 
     [~,~,Pc] = DEIM(Vc);
     Pc=Pc(:,1:nDeimC);
     Vc=Vc(:,1:nDeimC);
-    Dc_uq(:,:,i)=Vc*inv(Pc'*Vc);  %DEIM basis
-
-    %special treatment to store sparse logical matrix Pk
-    [iRow,iColume]=find(Pc);
-    PciRow_uq(:,i)=iRow;
-%     Pc=sparse(iRow,iColume,ones(nDeimC,1),nZ,nDeimC);     %recovery
+%     VdC_uq(:,:,i)=Vc*inv(Pc'*Vc);  %DEIM basis
+    VdC_uq=Vc*inv(Pc'*Vc);  %DEIM basis
     
-    waitbar(i/nSample)
+    romMesh{i}=picardAxbRomInit(mesh,V_uq,VdK_uq,Pk,VdC_uq,Pc);
+    V_uqRecord(:,:,i)=V_uq;
+    waitbar(i/nCluster)
 end
 close(h)
 
+
 %% Deim POD
 h=waitbar(0,'Deim pod on Ks on progress');
-
-
 for i=1:nSample
-    
     % Initilize ROM
-    Pk=sparse(PkiRow_uq(:,i),iColume,ones(nDeimK,1),nZ,nDeimK);     %recovery form storage
-    Pc=sparse(PciRow_uq(:,i),iColume,ones(nDeimC,1),nZ,nDeimC);     %recovery form storage
-    mesh.Ks=Ks(:,i);
+    romMesh{label(i)}.Ks=Ks(:,i);
     
-%     mesh.H=H_uq1(:,1,i); % use fom to start
-    tic 
-    [romMesh{i}]=picardAxbRomInit(mesh,V_uq(:,:,i),Dk_uq(:,:,i),Pk,Dc_uq(:,:,i),Pc);
-    
-    tCostPodInit(i,1)=toc;
+%     mesh.H=H_uq1(:,2,i); % use fom to start
+
+%     romMesh{label(i)}.Zh=V_uqRecord(:,:,label(i))'*H_uq1(:,1,i);  %use FOM to start
+    romMesh{label(i)}.Zh=V_uqRecord(:,:,label(i))'*h_init;
     
     tic
-    [H_pod,iteration2] = Richard1dPicardPodSolver(romMesh{i},nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
+    [H_pod,iteration2] = Richard1dPicardPodSolver(romMesh{label(i)},nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
     
-%     tCost2Total(i,1)=toc;
     tCost2(i,1)=toc;
-    
     iTera2(i,2)=sum(iteration2);
     H_uq2(:,:,i)=H_pod;
     
@@ -227,8 +204,6 @@ for i=1:nSample
 end
 close(h)
 
-% tCost2=tCost2Total-tCostPodInit;
-tCost2Total=tCost2+tCostPodInit;
 
 sum(tCost1)
 sum(tCost2)
@@ -243,36 +218,33 @@ var_H_uq2=std(H_uq2,0,3);
 mid_H_uq2=median(H_uq2,3);
 
 
-%% plot
-iVector=1;
-
-for i=1:nSample
-    systemVec(:,i)=romMesh{i}.mArk(:,iVector);
-end
-figure(1)
-plot(systemVec);
-
-
-
-
-
 %% show basis
-v1=reshape(V_uq(:,1,:),nZ,nSample);
-figure(1)
-plot(v1)
-
-%show cpu time
-figure(1)
-plot([tCost1,tCost2,tCost2Total]);
-title(sprintf('cpu time cost'))
-legend('fom','pod run time','pod total time (with model building time')
+% v1=reshape(V_uq(:,1,:),nZ,nSample);
+% figure(1)
+% plot(v1)
 
 
 
-
-
+%% plot
+nZShow=100;
+zShow=1:round(nZ/nZShow):nZ;
 figure(2)
+for t=1:1:nTime
+    figure(3)
+    plot(squeeze( H_uq1(zShow,t,:)),'-')
+    hold on 
+    plot(squeeze( H_uq2(zShow,t,:)),'--')
+    hold off
+    ylim([-80,20])
+    
+    title(sprintf('time=%i',t))
+%     legend('All KL basis','Truncation KL basis')
+    drawnow
+%     frame(t)=getframe;    %comment to save cpu time and memory
+end
 
+
+figure(3)
 nZShow=100;
 zShow=1:round(nZ/nZShow):nZ;
 figure(2)
@@ -292,22 +264,7 @@ for t=1:1:nTime
 end
 
 
-nZShow=100;
-zShow=1:round(nZ/nZShow):nZ;
-figure(3)
-for t=1:1:nTime
-    figure(3)
-    plot(squeeze( H_uq1(zShow,t,:)),'-')
-    hold on 
-    plot(squeeze( H_uq2(zShow,t,:)),'--')
-    hold off
-    ylim([-80,20])
-    
-    title(sprintf('time=%i',t))
-%     legend('All KL basis','Truncation KL basis')
-    drawnow
-%     frame(t)=getframe;    %comment to save cpu time and memory
-end
+
 
 
 

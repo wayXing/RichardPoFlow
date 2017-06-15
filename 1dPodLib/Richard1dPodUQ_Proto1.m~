@@ -21,7 +21,7 @@ clear
 close all
 %% Solver Setup
 % Spatial setup
-lengthZ=100;
+lengthZ=10;
 deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
@@ -129,7 +129,7 @@ covMatrix=GaussianVar*covMatrix;                %calculate covariance  matrix
 % sample= randn( size(klBasis,2),1);               %Sampling from a normal distribution
 sample= randn(nKl,1);                              %Sampling from a normal distribution
 
-sample= 5*ones(nKl,1);
+sample=randn(nKl,1);  
 
 Ks = (klBasis*sqrt(klEigenValue)*sample)+GaussianMean;  %Multivariate Gaussian
 Ks = exp(Ks);                                           %Multivariate  Log-normal
@@ -146,7 +146,7 @@ nIterationFom1=sum(iteration1)
 %% Prepare stage 
 % POD
 podEnergyKeep=0.995;
-% podEnergyKeep=0.9999;
+podEnergyKeep=0.9999;
 
 hSnapShot=H_fom(:,:);   %decide snapshot
 
@@ -158,7 +158,7 @@ energy=diag(S);
 cumulatedPodEnergy= cumsum(energy)./sum(energy);
 [~,nPod]=min(abs(cumulatedPodEnergy-podEnergyKeep))
 
-% nPod=10;
+% nPod=40;
 % U=U*sqrt(S);
 V=U(:,1:nPod);  %call the pod basis V
 
