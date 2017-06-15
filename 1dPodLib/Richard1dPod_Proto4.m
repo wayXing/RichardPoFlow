@@ -27,11 +27,11 @@ close all
 %% Setup
 % Spatial setup
 lengthZ=100;
-deltaZ=0.01;
+deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
-lengthTime=800;
+lengthTime=200;
 deltaT=1;
 nTime=lengthTime/deltaT;
 

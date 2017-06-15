@@ -111,14 +111,14 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
         
 %% Define and Decompose the permeability input field II
 lengthScale=lengthZ*0.2; %larger number means less stochastic (more correlation as one zooms in the 
-nKl=50;
+nKl=30;
 nSample=20;
 
 % KsMean=0.0094;
 % KsVar= (KsMean*0.3)^2;
 
 GaussianMean= log(0.0094);
-GaussianVar = (GaussianMean*0.1)^2;       
+GaussianVar = (GaussianMean*0.2)^2;       
 
 
 [Z] = ndgrid(0:deltaZ:lengthZ);
@@ -135,7 +135,6 @@ covMatrix=GaussianVar*covMatrix;                %calculate covariance  matrix
 % sample= randn( size(klBasis,2),1);               %Sampling from a normal distribution
 sample= randn(nKl,nSample);                              %Sampling from a normal distribution
 
-% sample(1:1,:)=0.5*ones(nSample,1);
 
 Ks = (klBasis*sqrt(klEigenValue)*sample)+GaussianMean;  %Multivariate Gaussian
 Ks = exp(Ks);                                          
@@ -160,7 +159,7 @@ close(h)
 %% Prepare stage 
 % global POD
 % podEnergyKeep=0.995;
-nPod=30;
+nPod=20;
    
 
 hSnapShot=reshape(H_uq1,nZ,[]);   %decide snapshot

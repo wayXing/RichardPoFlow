@@ -1,23 +1,20 @@
-function [] = Richard1dPodUQ_Proto2()
+function [] = Richard1dMlPodUQ_Proto1()
 % UQ for Richars equation with random input 
 %
-% Richars equation 1D pod solver testing file.
+% Richars equation 1D deim pod solver with machine learning improvements.
 % The function focus on fix Dirichlet BC.
-% This function serves as a Demo for all Richard solver developed in this
-% project.
-% Proto1: introduce deim pod solver as a function. Also using
-%         inline function to describe non-linear term.
-% Proto2: created from Proto1 and Richard1dUQ_Proto3. Batch UQ inout field
-%         for 1d Pod with independent ideal basis.
+% 
+% Proto1: Batch UQ inout field. Deim-pod.
+%         ML to learn basis/rom.
 %
 % Input parameters:
-%
+%3
 % Output parameters:
 %
 % See also: 
 %
 % Author:   Wei Xing
-% History:  29/05/2017  file created
+% History:  02/06/2017  file created
 %
 % tips:     -Ks with higher randomness would lead to highly variate result
 %           and thus unstable results for pod.
@@ -35,7 +32,7 @@ close all
 %% Solver Setup
 % Spatial setup
 lengthZ=100;
-deltaZ=0.1;
+deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
@@ -81,7 +78,7 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 
 %% Define and Decompose the permeability input field
 % scale=0.05;  
-nKl=5;
+nKl=50;
 scale=0.0094;            %recommand value from paper 
 lengthcale=0.75*lengthZ; %larger number means less stochastic (more correlation as one zooms in the 
                          %field) field. Thus gives smoother result.
@@ -93,7 +90,7 @@ distanceMatrix = squareform(distance);
 
 covMatrix=exp(-distanceMatrix./lengthcale);    %calculate covariance matrix
 
-% [nX,dimX]=size(Z);
+[nX,dimX]=size(Z);
 % nKl=nX;
 
 disp('KL decomposition for Ks...')
@@ -106,7 +103,7 @@ disp('KL decomposition for Ks...')
 % randomCoief= randn(nX,1);
 
 %% Make permeability field
-nSample=30;
+nSample=20;
 % klEnergyKeep=0.95;
 
 sample= randn(nKl,nSample);        %Random cofficient Sampling. Also the input in this case.
@@ -213,12 +210,12 @@ for i=1:nSample
     
 %     mesh.H=H_uq1(:,1,i); % use fom to start
     tic 
-    [romMesh]=picardAxbRomInit(mesh,V_uq(:,:,i),Dk_uq(:,:,i),Pk,Dc_uq(:,:,i),Pc);
+    [romMesh{i}]=picardAxbRomInit(mesh,V_uq(:,:,i),Dk_uq(:,:,i),Pk,Dc_uq(:,:,i),Pc);
     
     tCostPodInit(i,1)=toc;
     
     tic
-    [H_pod,iteration2] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
+    [H_pod,iteration2] = Richard1dPicardPodSolver(romMesh{i},nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
     
 %     tCost2Total(i,1)=toc;
     tCost2(i,1)=toc;
@@ -247,6 +244,17 @@ mid_H_uq2=median(H_uq2,3);
 
 
 %% plot
+iVector=1;
+
+for i=1:nSample
+    systemVec(:,i)=romMesh{i}.mArk(:,iVector);
+end
+figure(1)
+plot(systemVec);
+
+
+
+
 
 %% show basis
 v1=reshape(V_uq(:,1,:),nZ,nSample);
@@ -260,23 +268,6 @@ title(sprintf('cpu time cost'))
 legend('fom','pod run time','pod total time (with model building time')
 
 
-
-nZShow=100;
-zShow=1:round(nZ/nZShow):nZ;
-figure(3)
-for t=1:1:nTime
-    figure(3)
-    plot(squeeze( H_uq1(zShow,t,:)),'-')
-    hold on 
-    plot(squeeze( H_uq2(zShow,t,:)),'--')
-    hold off
-    ylim([-80,20])
-    
-    title(sprintf('time=%i',t))
-%     legend('All KL basis','Truncation KL basis')
-    drawnow
-%     frame(t)=getframe;    %comment to save cpu time and memory
-end
 
 
 
@@ -299,6 +290,28 @@ for t=1:1:nTime
     drawnow
 %     frame(t)=getframe;    %comment to save cpu time and memory
 end
+
+
+nZShow=100;
+zShow=1:round(nZ/nZShow):nZ;
+figure(3)
+for t=1:1:nTime
+    figure(3)
+    plot(squeeze( H_uq1(zShow,t,:)),'-')
+    hold on 
+    plot(squeeze( H_uq2(zShow,t,:)),'--')
+    hold off
+    ylim([-80,20])
+    
+    title(sprintf('time=%i',t))
+%     legend('All KL basis','Truncation KL basis')
+    drawnow
+%     frame(t)=getframe;    %comment to save cpu time and memory
+end
+
+
+
+
 
 
 
