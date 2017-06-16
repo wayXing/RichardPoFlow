@@ -21,7 +21,7 @@ function [] = Richard1dMlPodUqRun_Proto1()
 clear
 close all
 
-filename='/Users/weix/Desktop/Data/data7';
+filename='/Users/weix/Desktop/Data/data1';
 % [status,msg] = mkdir('/uesrs/desktop/Data/data1.mat')
 load(filename);
 
@@ -29,11 +29,11 @@ trainIndex=1:100;
 testIndex =101:130;
 
 HTrain=H_uq1(:,:,trainIndex);
-xTrain=sample(:,trainIndex)';
+xTrain=sample(1:10,trainIndex)';
 KsTrain=Ks(:,trainIndex)';
 
 HTest=H_uq1(:,:,testIndex);
-xTest=sample(:,testIndex)';
+xTest=sample(1:10,testIndex)';
 KsTest=Ks(:,testIndex)';
 
 %% Clustering
@@ -68,18 +68,16 @@ switch iMethod
         model = fitcecoc(xTrain,labelTrian);
         labelTest = predict(model,xTest);
     case 3
+%         net = patternnet(10);
+%         [net,tr] = train(net,xTrain',labelTrian');
+
         %convert class label
         labelTrianU=repmat(labelTrian,1,nCluster)== repmat(1:nCluster,size(xTrain,1),1);
 
         net = trainSoftmaxLayer(xTrain',labelTrianU');
         labelTestU = net(xTest');
         
-%         net = patternnet(10);
-%         [net,tr] = train(net,xTrain',labelTrian');
-
-        
-        labelTest =sum(labelTestU'.* repmat(1:nCluster,size(xTest,1),1),2);
-        labelTest=round(labelTest);
+        labelTest =sum(labelTestU'.* repmat(1:nCluster,size(xTest,1),size(xTest,2)),2);
 end
 
 

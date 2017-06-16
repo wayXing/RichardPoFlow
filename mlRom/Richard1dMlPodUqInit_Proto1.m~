@@ -76,7 +76,7 @@ nSample=200;
 % KsVar= (KsMean*0.3)^2;
 
 GaussianMean= log(0.0014);
-GaussianVar = (GaussianMean*0.5)^2;       
+GaussianVar = (GaussianMean*0.6)^2;       
 
 
 [Z] = ndgrid(0:deltaZ:lengthZ);
@@ -142,7 +142,7 @@ end
 
 
 %% Storage
-    filename='/Users/weix/Desktop/Data/data7';
+    filename='/Users/weix/Desktop/Data/data6';
     % [status,msg] = mkdir('/uesrs/desktop/Data/data1.mat')
     save(filename);
 
