@@ -18,27 +18,6 @@ function [] = Richard1d_Demo2()
 % Author:   Wei Xing
 % History:  06/05/2017  file created
 %
-%% Parameter Initial 
-%     % Set standard initialization parameter
-%        InitOptStandard = [0.2, 0.25, 0];
-%        % InitRand = 0.3 (use normal random inoculation with 30% of domain of variables),
-%        % InitNindKeep = 0.2 (keep 20% maximal)
-%        % InitNindUniform = 0 (create no random individuals)
-%     % Check input parameters
-%        % At least the first 2 input parameters are necessary
-%        if nargin < 2,  error('Not enough input parameters (at least 2 parameters - individuals and Nind)'); end
-%        if isnan(PopInit), PopInit = []; end
-%        % The 3. input parameter is optional, default is []
-%        if nargin < 3,  VLUB = []; end
-%     % the 4. input parameter is optional and can contain multiple options
-%        if nargin < 4, InitOpt = []; end
-%        if isnan(InitOpt), InitOpt = []; end
-%        % When too many options are contained in InitOpt, issue a warning and 
-%        % shorten the parameter vector
-%        if length(InitOpt) > length(InitOptStandard), 
-%           InitOpt = InitOpt(1:length(InitOptStandard)); 
-%           warning(' Too many parameters in InitOpt! InitOpt was shortened.');
-%        end
 tic
 %% Setup
 % Spatial setup
