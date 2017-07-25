@@ -27,7 +27,7 @@ close all
 %% Setup
 % Spatial setup
 lengthZ=100;
-deltaZ=0.01;
+deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup

@@ -1,9 +1,6 @@
-function [] = Richard3d_test1()
-% Richars equation 3D solver testing file.
+function [] = picard3dAxbForm2_Test()
+% picard3dAxbForm2 Test function
 % The function focus on fix Dirichlet BC.
-% This function serves as a Demo for all Richard solver developed in this
-% project.
-% Proto1: run basic Richards equation 3d for one case.
 %
 % Input parameters:
 %
@@ -14,6 +11,7 @@ function [] = Richard3d_test1()
 % See also: 
 % Author:   Wei Xing
 % History:  31/05/2017  file created
+%           25/07/2017  Document and modification
 % 
 % Log:
 % Version1.0 -the process need further vectorizition and parellel to speed

@@ -1,9 +1,8 @@
-function [] = Richard3d_test2()
+function [] = Richard3d_test1()
 % Richars equation 3D solver testing file.
 % The function focus on fix Dirichlet BC.
-% This function serves as a Demo for all Richard solver developed in this
-% project.
-% Proto1: run basic Richards equation 3d for one case.
+%
+% _test1: run basic Richards equation 3d for one case.
 %
 % Input parameters:
 %
@@ -13,10 +12,8 @@ function [] = Richard3d_test2()
 %
 % See also: 
 % Author:   Wei Xing
-% History:  1/06/2017  file created
+% History:  31/05/2017  file created
 % 
-% Vserion2: created from Richard3d_test1. Use solver function instead.
-%
 % Log:
 % Version1.0 -the process need further vectorizition and parellel to speed
 %             up and save memory.
@@ -42,7 +39,7 @@ deltaY=4;
 nY=lengthY/deltaY+1;
 
 % Temporal setup
-lengthT=200;
+lengthT=100;
 deltaT=1;
 nTime=lengthT/deltaT;
 
@@ -104,20 +101,6 @@ maxIteError=1;
     H_init(1,:,:)=ones(nX,nY)*-20.7;
     H_init(end,:,:)=ones(nX,nY)*-61.5;
     
-    
-%% Initilize mesh 
-mesh.deltaZ=deltaZ;
-mesh.nZ=nZ;
-mesh.deltaX=deltaX;
-mesh.nX=nX;
-mesh.deltaY=deltaY;
-mesh.nY=nY;
-
-mesh.nodeIndex=nodeIndex;
-mesh.nNode=length(nodeIndex(nodeIndex~=0));
-% mesh.nodeInFieldIndex=nodeInFieldIndex;
-
-
 %% Define for C and K non-linear function
 theata_s=0.287;
 theata_r=0.075;
@@ -135,10 +118,10 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 
 
 %% Define Permeability field input 
-scale=0.0094;        % overall magnitude of the permeability field. decide the changing speed.
+scale=0.05;        % overall magnitude of the permeability field. decide the changing speed.
 lengthScale=100;      %larger number means less stochastic (more correlation as one zooms in the 
                     %field) field. Thus gives smoother result.
-nKl=100;             %number of KL baisi/cofficients
+nKl=50;             %number of KL baisi/cofficients
                                       
 [nAllNode,nDimension]=size([Z(:),X(:),Y(:)]);
 % nKl=nAllNode;
@@ -175,27 +158,66 @@ bubbleScale=100;
 scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
 
 
+%% Initilize mesh 
+mesh.deltaZ=deltaZ;
+mesh.nZ=nZ;
+mesh.deltaX=deltaX;
+mesh.nX=nX;
+mesh.deltaY=deltaY;
+mesh.nY=nY;
+
+mesh.nodeIndex=nodeIndex;
+mesh.nNode=length(nodeIndex(nodeIndex~=0));
+
+mesh.H=H_init;      %impose initial condition.
+
 %% MAIN
-mesh.H=H_init;       %impose initial condition.
-mesh.Ks=Ks;
+% nNode=length(nodeIndex(nodeIndex~=0));
+% H=H_init;       %impose initial condition.
 
 tic
-[hRecord,iteration1] = Richard3dPicardSolver(mesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
+for t=1:nTime
+    H_PreviousTime= mesh.H;
+    for k=1:nMaxIteration       
+        H0=mesh.H;
+        
+        %update mesh value 
+        mesh.C=theataDif(mesh.H);
+        mesh.K=K(mesh.H,Ks);
+        
+%         [A,B] = PicardFdm(H_PreviousTime);
+        [A,B]=picard3dAxbForm2(mesh,H_PreviousTime,deltaT);
+
+        hFree=A\(-B);
+                
+%         H(find(nodeIndex))=hFree;       %pay extra attention to ordering
+        mesh.H(nodeInFieldIndex)=hFree; 
+%         mesh.H=H;
+        
+        sseIte=sum((mesh.H(:)-H0(:)).^2);
+        if sqrt(sseIte)<maxIteError 
+            break 
+        end
+        
+    end
+    
+    hRecord(:,:,:,t)=mesh.H;
+
+end
 toc
 
 %% Plotting 
 % H=mesh.H;
 
-figure(1)
-plot(iteration1)
-title(sprintf('Iteration at each time step'))
+% figure(1)
+% scatter3(X(:),Y(:),Z(:),Ks(:)*10000,Ks(:)*10000)
 
 % end time pressure
-% figure(2)
-% scatter3(X(:),Y(:),Z(:),abs(H(:)),abs(H(:)))
-% title('end time pressure')
+figure(2)
+scatter3(X(:),Y(:),Z(:),abs(mesh.H(:)),abs(mesh.H(:)))
+title('end time pressure')
 
-% figure(1)
+% figure(5)
 % p = patch(isosurface(H,-60));
 % isonormals(H,p)
 % p.FaceColor = 'red';
@@ -256,7 +278,7 @@ end
 % preasure head propogation in sphere volume
 figure(5)
 for t=1:4:nTime
-    hVector=(hRecord(:,:,:,t)+100)*10;    
+    hVector=(hRecord(:,:,:,t)+100)*20;    
 %     scatter3(X(:),Y(:),Z(:),(hVector(:)),(Ks(:)*10000),'fill')
     scatter3(X(:),Y(:),Z(:),(hVector(:)),(hVector(:)),'fill')
 %     shading interp;
