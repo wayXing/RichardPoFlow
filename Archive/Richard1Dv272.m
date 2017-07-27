@@ -1,6 +1,11 @@
-function [  ] = Richard1Dv27()
+function [  ] = Richard1Dv272()
 % 1D Richards equation with Dirichlet/Neumann boundary condition 
 % h based Richards equation
+%
+% This is a self-contained Script DEMO function that requires no other
+% functions and data.
+% This Code is meant to be tutorial purpose and thus may suffer from
+% computational inefficiency and other issues.
 %
 % First edition: Weix 21/04/2017 
 %
@@ -18,10 +23,12 @@ function [  ] = Richard1Dv27()
 % update vesrion v2.7: improve readibility and flexibility (sacrefice some performance)
 %                      Compared to v2.5. all nodes are scaned at one time
 %                      then identidy its type and neighbour.
+% update vesrion v2.7.2: change the way node type are recorded so that
+% ifNBC could be omitted.
 
 tic
 %% Grid structure Initial
-lengthZ=1000;
+lengthZ=40;
 deltaZ=1;
 
 nZ=lengthZ/deltaZ+1;    %number of Z index total 
@@ -35,32 +42,39 @@ Ks=permeabilityField(Z)*0.01;
 %% costumize initial value and BC
 
 %option 1 dbc
-%     nodeIndex(2:end-1)=1:nZ-2;
-%     h=ones(nZ,1).*-60;
-% 
-%     ifdbcNode(1)=1;
-%     h(1)=-20;
-% 
-%     % ifdbcNode(end)=1;
-%     h(end)=-60;
-%     
-%     ifNbc=logical(zeros(nZ,1));     %no Neumann BC
+    nodeIndex(2:end-1)=1:nZ-2;
+    h=ones(nZ,1).*-60;
+
+    h(1)=-20;
+    h(end)=-60;
+
 
 %option 2 dbc + nbc
     nodeIndex(2:end)=1:nZ-1;
     h=ones(nZ,1).*-60;
     
-    ifdbcNode=logical(zeros(nZ,1)); 
-    ifdbcNode(1)=1;
     h(1)=-20;
-
-    ifNbc=logical(zeros(nZ,1));         %default zero flux
-    ifNbc(end)=1;
+    h(20)=-30;
+    nodeIndex(end)=-nodeIndex(end);
+   
     % nbcValue=2;       certain flux
 
+%option 3 a DBC in the middle
+%     nNode=nZ-3;
+%     nodeIndex(1)=0;
+%     nodeIndex(2:10)=1:9;
+%     nodeIndex(11)=0;
+%     nodeIndex(12:end-1)=10:nNode;
+%     nodeIndex(end)=0;
+% 
+%     h=ones(nZ,1).*-60;
+% 
+%     h(1)=-20;
+%     h(11)=-30;
+%     h(end)=-60;
 
 %% solver setup
-lengthTime=300;
+lengthTime=360;
 deltaTime=1;
 nTime=lengthTime/deltaTime+1;
 
@@ -120,22 +134,30 @@ end
         A=speye(length(nNode));
         B=zeros(length(nNode),1);
         
+        tic
         C=theataDifFunc(h);
 %         K=kFunc(h);
         K=kFieldFunc(h,Ks);
+        nonlieanrTime=toc
 
+        tic
         for iz=1:nZ
             indexCenter=nodeIndex(iz);
             
-            if indexCenter==0;      %is NOT a free node with index number
+            switch sign(indexCenter)
+                case 0
+%             if indexCenter==0;      %is NOT a free node with index number
                continue
 
            %TODO this is wrong As NBC location (0 flux direction) need to be found.
-            elseif    ifNbc(iz)==1  
+                case -1
                 
-                if iz==1        % a top NBC point               
+%             elseif    indexCenter<0;  
+                
+                if iz==1        % a top NBC point  
+                   indexCenter=abs(nodeIndex(iz));
                    indexUp=0;       
-                   indexDown=nodeIndex(iz+1);
+                   indexDown=abs(nodeIndex(iz+1));
 
                    %  Forge a up ghost point 
                    nbcValue=0;  
@@ -148,7 +170,8 @@ end
                    cCenter=C(iz,1);    
                    
                 elseif iz==nZ       %if a bottom NBC point
-                   indexUp=nodeIndex(iz-1);     
+                   indexCenter=abs(nodeIndex(iz));
+                   indexUp=abs(nodeIndex(iz-1));     
                    indexDown=0;              
                    
                    hUp=h(iz-1);
@@ -163,16 +186,20 @@ end
                 else
                     error('innier Neumann BC point not support yet')
                 end            
-            else        % if Normal inner point
+                case 1
+%             elseif indexCenter>0;       % if Normal inner point
                                         
-               indexUp=nodeIndex(iz-1);
-               indexDown=nodeIndex(iz+1);
-               hUp=h(iz-1);
+               indexUp=abs(nodeIndex(iz-1));
+               indexDown=abs(nodeIndex(iz+1));
+           hUp=h(iz-1);
                hDown=h(iz+1);     
                
                 kHalfUp   =(K(iz,1)+K(iz-1,1))/2;
                 kHalfDown =(K(iz,1)+K(iz+1,1))/2;
                 cCenter=C(iz,1);
+                otherwise  
+                error('unknown node type');
+                
             end   
 
                 wUp   = -kHalfUp  ./  deltaZ^2;
@@ -191,7 +218,10 @@ end
 
                 A(indexCenter,indexCenter)=wCenter;
                 B(indexCenter,1)=b;
+                
         end
+        assembleTime=toc
+        
     end
 
 end 
@@ -232,7 +262,6 @@ r=4.74;
 
 result=ks.*rho./(rho+abs(h).^r);
 end
-
 
 
 

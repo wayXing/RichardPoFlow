@@ -7,7 +7,7 @@ function [] = Richard1dPodUQ_Proto3()
 % project.
 % Proto1: introduce deim pod solver as a function. Also using
 %         inline function to describe non-linear term.
-% Proto3: created from Proto1 and Richard1dUQ_Proto3. Batch UQ inout field
+% Proto3: created from Proto1 and Richard1dUQ_Proto2. Batch UQ inout field
 %         for 1d Pod with global basis.
 %
 % Input parameters:

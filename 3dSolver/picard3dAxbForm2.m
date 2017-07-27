@@ -12,10 +12,11 @@ function [A,B]=picard3dAxbForm2(mesh,H_PreviousTime,deltaT)
 % See also: 
 % Author:   Wei Xing
 % History:  31/05/2017  file created
-% log:      
+% TODO:      
 % v2        -created from picard3dAxbForm to speed up using better storage
 %           structure (avoid visiting full, though sparse, matrix at every 
 %           iteration. NO proper vectorization yet. Loop in use!
+%           -only accept homogeneous Neumann BC or Dirichlet BC.
 
 %%  Auxiliary variable   
 nNode=mesh.nNode;

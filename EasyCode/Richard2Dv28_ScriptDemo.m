@@ -1,8 +1,11 @@
-function [  ] = Richard2Dv28()
+function [  ] = Richard2Dv28_ScriptDemo()
 % 2D Richards equation with Dirichlet/Neumann boundary condition 
 % H based Richards equation
 %
-% This is a self-contained DEMO function.
+% This is a self-contained Script DEMO function that requires no other
+% functions and data.
+% This Code is meant to be tutorial purpose and thus may suffer from
+% computational inefficiency and other issues.
 %
 % Discretize method:  1st order Finite difference solution on space and time.
 % Nonlinear solution: Picards iteration.
@@ -21,16 +24,17 @@ function [  ] = Richard2Dv28()
 %               Update the way  points are accessed. (see Richard1Dv27 for more history)
 % Version 2.72: Weix 25/04/2017 improve organization
 % Version 2.8:  Weix 02/05/2017 Use class definition to seperate code.
+%               Weix 26/07/2017 update documentation.
 %% 
 tic
 %% Setup
 % Spatial setup
 lengthZ=40;
-deltaZ=1;
+deltaZ=4;
 nZ=lengthZ/deltaZ+1;
 
 lengthX=40;
-deltaX=1;
+deltaX=4;
 nX=lengthX/deltaX+1;
 
 % Temporal setup

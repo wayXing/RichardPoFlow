@@ -10,7 +10,9 @@ function [H,iteration] = Richard3dPicardSolver(mesh,nTime,deltaT,nMaxIteration,m
 %
 % Author:   Wei Xing
 % History:  01/06/2017  file created
-% TODO:     Accept non-uniform t input
+% TODO:     -Accept non-uniform t input
+%           -only accept homogeneous Neumann BC or Dirichlet BC.
+
 
 %% Auxiliary variable
 nodeInFieldIndex=find(mesh.nodeIndex); %specify free node index  

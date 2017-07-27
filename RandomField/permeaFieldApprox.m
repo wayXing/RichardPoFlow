@@ -46,7 +46,8 @@ muX=log(muY)-diag(SigmaX)./2;
 [klBasis,klEigenValue,~] = svds(SigmaX,nKL); 
 
 %Generate independent normal samples 
-rng(seed);  %pseudo random
+% rng(seed);  %pseudo random
+
 sample= randn(nKL,nSample);
 x=klBasis*sqrt(klEigenValue)*sample+repmat(muX,1,nSample);
 

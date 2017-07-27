@@ -1,6 +1,11 @@
-function [  ] = Richard1Dv272()
+function [  ] = Richard1Dv272_ScriptDemo()
 % 1D Richards equation with Dirichlet/Neumann boundary condition 
 % h based Richards equation
+%
+% This is a self-contained Script DEMO function that requires no other
+% functions and data.
+% This Code is meant to be tutorial purpose and thus may suffer from
+% computational inefficiency and other issues.
 %
 % First edition: Weix 21/04/2017 
 %

@@ -1,6 +1,11 @@
 function [] = Solver_MKI_POD()
 % 1D Richards equation with constant boundary condition 
 %
+% This is a self-contained Script DEMO function that requires no external
+% functions and data.
+% This Code is meant for tutorial purpose and thus may suffer from
+% computational inefficiency and other issues.
+%
 % First edition: Weix 23/03/2017 
 %%
 clear 

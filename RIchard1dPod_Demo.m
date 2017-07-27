@@ -1,6 +1,6 @@
-function [] = RIchard1d_Demo()
-% Richard1d solver demo funtion, Uisng Pircards iteration on Dirichlet and 
-% condition. The permeability field is
+function [] = RIchard1dPod_Demo()
+% Richard1d pod reduced order model solver demo funtion, 
+% Uisng Pircards iteration on Dirichlet Boundary condition. The permeability field is
 % heterogeneous.
 %
 % Input parameters:
@@ -55,10 +55,8 @@ beta=3.96;
 
 rho=1.175e6;
 r=4.74;
-% kFromhKs @(h) Ks.*rho./(rho+abs(h).^r);
-% K = @(h) Ks.*rho./(rho+abs(h).^r);
-K = @(h,Ks) Ks.*rho./(rho+abs(h).^r);
 
+K = @(h,Ks) Ks.*rho./(rho+abs(h).^r);
 theata    = @(h)  alpha.*(theata_s-theata_r)/(alpha+abs(h).^beta)+theata_r;
 theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*abs(h).^(beta-1);
 
@@ -66,8 +64,8 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 lengthcale=lengthZ/10;
 muY=0.0094; 
 DeviationRatio=0.2;     %set DeviationRatio=10 to see dramatic results.
-%     nKL=100;
-klEnergyKeep=0.90;
+nKl=10;
+% klEnergyKeep=0.90;
 
 
 [Z] = ndgrid(0:deltaZ:lengthZ);
@@ -83,44 +81,93 @@ muX=log(muY)-diag(SigmaX)./2;
 % KL/POD on X
 [klBasis,klEigenValue,~] = svds(SigmaX,nZ);  % KL decomposition on covariance matrix via SVD/eigen decomposition
 
-KlEnergy=diag(klEigenValue);
-cumulatedKlEnergy= cumsum(KlEnergy)./sum(KlEnergy);
-[~,nKl]=min(abs(cumulatedKlEnergy-klEnergyKeep))
+% KlEnergy=diag(klEigenValue);
+% cumulatedKlEnergy= cumsum(KlEnergy)./sum(KlEnergy);
+% [~,nKl]=min(abs(cumulatedKlEnergy-klEnergyKeep))
 
 % nKl=3;
 sample= randn(nZ,1);
-
-Ks =exp(klBasis*sqrt(klEigenValue)*sample+muX);
-Ksr=exp(klBasis(:,1:nKl)*sqrt(klEigenValue(1:nKl,1:nKl))*sample(1:nKl,1)+muX);
+Ks=exp(klBasis(:,1:nKl)*sqrt(klEigenValue(1:nKl,1:nKl))*sample(1:nKl,1)+muX);
     
-   
 
 %% FOM on K
 mesh.Ks=Ks;
 
 tic
-[hRecord1,iteration1] = Richard1dPicardSolver(mesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
+[H_fom,iteration1] = Richard1dPicardSolver(mesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
 fomTimeCostFom1=toc  
 nIterationFom1=sum(iteration1)
 
-%% FOM on Kr
-mesh.Ks=Ksr;
+
+%% Prepare stage 
+% POD
+podEnergyKeep=0.995;
+% podEnergyKeep=0.9999;
+
+hSnapShot=H_fom(:,:);   %decide snapshot
+
+disp('POD decomposition process...')
+[U,S,~]=svd(hSnapShot,'econ');
+
+% [U,S,V]=svd(H);
+energy=diag(S);
+cumulatedPodEnergy= cumsum(energy)./sum(energy);
+[~,nPod]=min(abs(cumulatedPodEnergy-podEnergyKeep))
+
+% nPod=40;
+% U=U*sqrt(S);
+V=U(:,1:nPod);  %call the pod basis V
+
+% DEIM nonlinear function 
+
+% nDeimK=100;
+% nDeimC=100;
+nDeimK=nPod;    %number of Deim basis for k term
+nDeimC=nPod;    %number of Deim basis for c term
+
+%k
+disp('DEIM decomposition for k...')
+for t=1:size(hSnapShot,2)
+    kRecord(:,t)=K(hSnapShot(:,t),Ks);
+end
+% [Vk,~,~]=svd(kRecord,'econ');
+[Vk,~,~]=svds(kRecord,nDeimK);
+
+[~,~,Pk] = DEIM(Vk);
+Pk=Pk(:,1:nDeimK);
+Vk=Vk(:,1:nDeimK);
+VdK=Vk*inv(Pk'*Vk);  %DEIM basis
+
+%c
+disp('DEIM decomposition for c...')
+cRecord=theataDif(hSnapShot);
+% [Vc,~,~]=svd(cRecord,'econ');
+[Vc,~,~]=svds(cRecord,nDeimC);
+
+[~,~,Pc] = DEIM(Vc);
+Pc=Pc(:,1:nDeimC);
+Vc=Vc(:,1:nDeimC);
+VdC=Vc*inv(Pc'*Vc);  %DEIM basis
+
+%% Deim POD
+% Initilize ROM
+[romMesh]=picardAxbRomInit(mesh,V,VdK,Pk,VdC,Pc);
 
 tic
-[hRecord2,iteration2] = Richard1dPicardSolver(mesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
-fomTimeCostFom2=toc  
-nIterationFom2=sum(iteration2)
+[H_pod,iteration2] = Richard1dPicardPodSolver(romMesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
+podTimeCostFom1=toc  
+nIterationFom1=sum(iteration1)
 
 
 %% Plot
 figure(1)
 
-plot(cumulatedKlEnergy)
-hline =line([0,nKl],[klEnergyKeep,klEnergyKeep]);
+plot(cumulatedPodEnergy)
+hline =line([0,nPod],[podEnergyKeep,podEnergyKeep]);
 hline.Color = 'r';
-vline =line([nKl,nKl],[0,klEnergyKeep]);
+vline =line([nPod,nPod],[0,podEnergyKeep]);
 vline.Color = 'r';
-title(sprintf('Accumulated energy ration and truncation'))
+title(sprintf('Accumulated energy ration and truncation for POD'))
 
 
 % subplot(2,2,2)
@@ -134,22 +181,12 @@ title(sprintf('number of iteration at each time step'))
 legend(sprintf('Full Kl total=%i',sum(iteration1)),sprintf('Truncated Kl total=%i',sum(iteration2)))
 
 
-
-
 figure(3)
-plot(Ks)
-hold on 
-plot(Ksr)
-hold off
-title(sprintf('permeability field'))
-legend('All KL basis','Truncation KL basis')
-
-figure(4)
 for t=1:1:nTime
-    figure(4)
-    plot(hRecord1(:,t))
+    figure(3)
+    plot(H_fom(:,t))
     hold on 
-    plot(hRecord2(:,t))
+    plot(H_pod(:,t))
     hold off
     title(sprintf('time=%i',t))
 %     legend('All KL basis','Truncation KL basis')
@@ -161,15 +198,3 @@ end
 
 
 end
-
-
-
-
-
-%% Auxiliary function
-function [n]=energy2n(allEigenvalues,energy)
-% KlEnergy=diag(klEigenValue);
-cumulatedKlEnergy= cumsum(allEigenvalues)./sum(energy);
-[~,n]=min(abs(cumulatedKlEnergy-klEnergyKeep));
-end
-
