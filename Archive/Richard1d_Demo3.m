@@ -18,7 +18,7 @@ function [] = Richard1d_Demo3()
 % Author:   Wei Xing
 % History:  06/05/2017  file created
 %
-%% Parameter Initial 
+%% Parameter Initial ?This is just a template for later use. PLEASE IGNORE!?
 %     % Set standard initialization parameter
 %        InitOptStandard = [0.2, 0.25, 0];
 %        % InitRand = 0.3 (use normal random inoculation with 30% of domain of variables),
@@ -42,7 +42,7 @@ function [] = Richard1d_Demo3()
 tic
 %% Setup
 % Spatial setup
-lengthZ=10000;
+lengthZ=100;
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 

@@ -24,7 +24,7 @@ close all
 %% Solver Setup
 % Spatial setup
 lengthZ=100;
-deltaZ=0.01;
+deltaZ=0.1;
 nZ=lengthZ/deltaZ+1;
 
 % Temporal setup
@@ -69,42 +69,76 @@ theata    = @(h)  alpha.*(theata_s-theata_r)/(alpha+abs(h).^beta)+theata_r;
 theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*abs(h).^(beta-1);
 
 %% Define and Decompose the permeability input field
-% scale=0.05;  
-scale=0.0094;          %recommand value from paper 
-lengthcale=1*lengthZ; %larger number means less stochastic (more correlation as one zooms in the 
-                       %field) field. Thus gives smoother result.
-              
+%         % scale=0.05;  
+%         scale=0.0094;          %recommand value from paper 
+%         lengthcale=0.5*lengthZ; %larger number means less stochastic (more correlation as one zooms in the 
+%                                %field) field. Thus gives smoother result.                      
+%         nKl=3;
+% 
+% 
+%         [Z] = ndgrid(0:deltaZ:lengthZ);
+%         %calculate distance matrix
+%         distance = pdist(Z);
+%         distanceMatrix = squareform(distance);
+% 
+%         covMatrix=exp(-distanceMatrix./lengthcale);    %calculate covariance matrix
+% 
+%         disp('KL decomposition for Ks...')
+%         [klBasis,klEigenValue,~] = svds(covMatrix,nKl);  % KL decomposition on covariance matrix via SVD/eigen decomposition
+%         % Vkl=klBasis*sqrt(klEigenValue);
+% 
+%         %a log (multi) normal permeability field
+%         %     Ks=exp(klBasis*sqrt(klEigenValue)*sample);
+% 
+%         % randomCoief= randn(nX,1);
+% 
+%         %% Make permeability field
+%         nSample=10;
+%         % klEnergyKeep=0.95;
+% 
+%         sample= randn(nKl,nSample);        %Random cofficient Sampling. Also the input in this case.
+% 
+%         % sample(1:5,:)=ones(5,nSample)*0.7;
+% 
+%         % [U,S,V]=svd(H);
+%         % KlEnergy=diag(klEigenValue);
+%         % cumulatedKlEnergy= cumsum(KlEnergy)./sum(KlEnergy);
+%         % [~,nKl]=min(abs(cumulatedKlEnergy-klEnergyKeep))
+% 
+%         Ks =exp(klBasis*sqrt(klEigenValue)*sample).*scale;
+%         % Ksr=exp(klBasis(:,1:nKl)*sqrt(klEigenValue(1:nKl,1:nKl))*sample(1:nKl,:)).*scale;
+        
+        
+%% Define and Decompose the permeability input field II
+lengthScale=lengthZ*0.2; %larger number means less stochastic (more correlation as one zooms in the 
+nKl=50;
+nSample=20;
+
+% KsMean=0.0094;
+% KsVar= (KsMean*0.3)^2;
+
+GaussianMean= log(0.0094);
+GaussianVar = (GaussianMean*0.1)^2;       
+
+
 [Z] = ndgrid(0:deltaZ:lengthZ);
 %calculate distance matrix
 distance = pdist(Z);
 distanceMatrix = squareform(distance);
 
-covMatrix=exp(-distanceMatrix./lengthcale);    %calculate covariance matrix
+covMatrix=exp(-distanceMatrix./lengthScale);    %calculate correlation matrix 
+covMatrix=GaussianVar*covMatrix;                %calculate covariance  matrix 
 
-[nX,dimX]=size(Z);
-nX=50;
+[klBasis,klEigenValue,~] = svds(covMatrix,nKl);  % KL decomposition on covariance matrix via SVD/eigen decomposition
 
-disp('KL decomposition for Ks...')
-[klBasis,klEigenValue,~] = svds(covMatrix,nX);  % KL decomposition on covariance matrix via SVD/eigen decomposition
-% Vkl=klBasis*sqrt(klEigenValue);
+% Make permeability field
+% sample= randn( size(klBasis,2),1);               %Sampling from a normal distribution
+sample= randn(nKl,nSample);                              %Sampling from a normal distribution
 
-%a log (multi) normal permeability field
-%     Ks=exp(klBasis*sqrt(klEigenValue)*sample);
+% sample(1:1,:)=0.5*ones(nSample,1);
 
-% randomCoief= randn(nX,1);
-
-%% Make permeability field
-nSample=10;
-% klEnergyKeep=0.95;
-
-sample= randn(nX,nSample);        %Random cofficient Sampling. Also the input in this case.
-% [U,S,V]=svd(H);
-% KlEnergy=diag(klEigenValue);
-% cumulatedKlEnergy= cumsum(KlEnergy)./sum(KlEnergy);
-% [~,nKl]=min(abs(cumulatedKlEnergy-klEnergyKeep))
-
-Ks =exp(klBasis*sqrt(klEigenValue)*sample).*scale;
-% Ksr=exp(klBasis(:,1:nKl)*sqrt(klEigenValue(1:nKl,1:nKl))*sample(1:nKl,:)).*scale;
+Ks = (klBasis*sqrt(klEigenValue)*sample)+GaussianMean;  %Multivariate Gaussian
+Ks = exp(Ks);                                          
 
 %% FOM on K
 % define non-linear term
@@ -126,7 +160,7 @@ close(h)
 %% Prepare stage 
 % global POD
 % podEnergyKeep=0.995;
-nPod=40;
+nPod=30;
    
 
 hSnapShot=reshape(H_uq1,nZ,[]);   %decide snapshot
@@ -151,9 +185,17 @@ nDeimC=nPod;    %number of Deim basis for c term
 
 %k
 %     disp('DEIM decomposition for k...')
-for t=1:size(hSnapShot,2)
-    kRecord(:,t)=K(hSnapShot(:,t),Ks(:,i));
+for i=1:nSample
+    for t=1:size(H_uq1,2)
+        kRecord(:,t,i)=K(H_uq1(:,t,i),Ks(:,i));
+    end  
 end
+kRecord=reshape(kRecord,nZ,[]);   %decide snapshot
+%     for t=1:size(hSnapShot,2)
+%         kRecord(:,t)=K(hSnapShot(:,t),Ks(:,i));
+%     end
+
+
 % [Vk,~,~]=svd(kRecord,'econ');
 [Vk,~,~]=svds(kRecord,nDeimK);
 
@@ -219,8 +261,25 @@ mid_H_uq2=median(H_uq2,3);
 
 
 %% plot
+nZShow=100;
+zShow=1:round(nZ/nZShow):nZ;
 figure(2)
+for t=1:1:nTime
+    figure(3)
+    plot(squeeze( H_uq1(zShow,t,:)),'-')
+    hold on 
+    plot(squeeze( H_uq2(zShow,t,:)),'--')
+    hold off
+    ylim([-80,20])
+    
+    title(sprintf('time=%i',t))
+%     legend('All KL basis','Truncation KL basis')
+    drawnow
+%     frame(t)=getframe;    %comment to save cpu time and memory
+end
 
+
+figure(3)
 nZShow=100;
 zShow=1:round(nZ/nZShow):nZ;
 figure(2)
@@ -240,21 +299,7 @@ for t=1:1:nTime
 end
 
 
-% zShow=1:1:nZ;
-figure(3)
-for t=1:1:nTime
-    figure(3)
-    plot(squeeze( H_uq1(zShow,t,:)),'-')
-    hold on 
-    plot(squeeze( H_uq2(zShow,t,:)),'--')
-    hold off
-    ylim([-80,20])
-    
-    title(sprintf('time=%i',t))
-%     legend('All KL basis','Truncation KL basis')
-    drawnow
-%     frame(t)=getframe;    %comment to save cpu time and memory
-end
+
 
 
 

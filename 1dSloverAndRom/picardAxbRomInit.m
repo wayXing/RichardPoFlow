@@ -69,7 +69,7 @@ end
 %     ArBC=zeros(nPod,nPod);
     
     %k related terms
-    for i=1:nDeimK  %ONLY allow for nDeimK=nDeimC
+    for i=1:nDeimK  
         %loop can be replaced using tensor product.see note.
        
         %ArV means Ar's basis V. a matrix basis.

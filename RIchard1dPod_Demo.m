@@ -63,8 +63,8 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 %% Define and Decompose the permeability input field
 lengthcale=lengthZ/10;
 muY=0.0094; 
-DeviationRatio=0.2;     %set DeviationRatio=10 to see dramatic results.
-nKl=10;
+DeviationRatio=0.4;     %set DeviationRatio=10 to see dramatic results.
+nKl=50;
 % klEnergyKeep=0.90;
 
 
@@ -161,7 +161,11 @@ nIterationFom1=sum(iteration1)
 
 %% Plot
 figure(1)
+plot(Ks)
+title(sprintf('Permeability field'))
 
+
+figure(2)
 plot(cumulatedPodEnergy)
 hline =line([0,nPod],[podEnergyKeep,podEnergyKeep]);
 hline.Color = 'r';
@@ -171,7 +175,7 @@ title(sprintf('Accumulated energy ration and truncation for POD'))
 
 
 % subplot(2,2,2)
-figure(2)
+figure(3)
 plot(iteration1)
 hold on 
 plot(iteration2)
@@ -181,9 +185,9 @@ title(sprintf('number of iteration at each time step'))
 legend(sprintf('Full Kl total=%i',sum(iteration1)),sprintf('Truncated Kl total=%i',sum(iteration2)))
 
 
-figure(3)
+figure(4)
 for t=1:1:nTime
-    figure(3)
+    figure(4)
     plot(H_fom(:,t))
     hold on 
     plot(H_pod(:,t))
