@@ -6,6 +6,7 @@ The ground flow is modeled based on the Richards equation (h-based) using finite
 difference method with Picard iteration.
 
 ### The code provides:
+---
 - Basic Richards equaion solver for 1d/2d/3d problems.
 	- Accept Dirichlet and Neumann boundary conditions.
 	- Accept user specified non-linear term function
@@ -17,10 +18,12 @@ difference method with Picard iteration.
 - log-normal random field approximating (dimension reduced) generator using KL theory.
 
 ### The code will provides:
+---
 - Data-driven surrogates for UQ problems
 - Hybrid surrogates for UQ problems
 
 ### The code Folder:
+---
 - RandomField: functions for generating random fields
 - 3dSolver: functions for 3d Richards equation
 - 1dSloverAndRom: functions for 1d Richards equation and the reduced order model.
@@ -32,10 +35,12 @@ difference method with Picard iteration.
 	to learn for *'engineering-driven'* folks like myself. So I decide to keep them
 	and hop it might be useful for someone someday.)
 
-###The code usage:
+### The code usage:
+---
+1. Run startUp.m to include all function libraries.
+2. Run DEMO files at root for demonstrations.
 
-Run DEMO files at root for demonstrations.
-Most function also comes with a test
+Most function in subfolder also comes with a test
 or DEMO file for the purpose of demonstrations.
 
 

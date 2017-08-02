@@ -1,4 +1,4 @@
-function [] = RIchard1d_Demo()
+function [] = Richard1d_Demo()
 % Richard1d solver demo funtion, Uisng Pircards iteration on Dirichlet and 
 % condition. The permeability field is
 % heterogeneous.
