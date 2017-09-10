@@ -19,24 +19,24 @@ function [] = RIchard3d_Demo()
 %% Setup
 % Spatial setup
 lengthZ=40;                 
-deltaZ=4;
+deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
 lengthX=40;
-deltaX=4;
+deltaX=1;
 nX=lengthX/deltaX+1;
 
 lengthY=40;
-deltaY=4;
+deltaY=1;
 nY=lengthY/deltaY+1;
 
 % Temporal setup
-lengthT=300;
+lengthT=20;
 deltaT=1;
 nTime=lengthT/deltaT;
 
 % Iteration solver setup
-nMaxIteration=50;
+nMaxIteration=100;
 maxIteError=1;
 
 % Generate grid
@@ -142,7 +142,7 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 
 
 %% Define Permeability field input 
-iMethod=2;
+iMethod=3;
 switch iMethod
     case 1      %directly give mean and covariance to X. Not recommended for realistic case.
         
@@ -198,6 +198,24 @@ switch iMethod
         Ks=reshape(Ks,nZ,nX,nY,nSample);   
         
         %Plot 
+        bubbleScale=100;
+        scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
+        
+    case 3 %interpolation for high resolution permeability. used for fine grid where permeability generation may fail
+        lengthcale=4;
+        muY=0.0094; 
+        DeviationRatio=0.4;     %set DeviationRatio=10 to see dramatic results.
+        nSample=1;
+        nKL=10;
+        
+        [coarseZ,coarseX,coarseY] = ndgrid(0:deltaZ*4:lengthZ,0:deltaX*4:lengthX,0:deltaY*4:lengthY); %have to be just fine times
+        
+%         Ks=permeaField([Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample);
+        Ks=permeaFieldApproxUpscale([coarseZ(:),coarseX(:),coarseY(:)],[Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample,nKL);
+%         Ks=reshape(Ks,nZ,nX,nY,nSample);  
+        Ks=reshape(Ks,nZ,nX,nY,[]); 
+%         Ks=reshape(Ks,nZ,nX,nY);
+        
         bubbleScale=100;
         scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
         
