@@ -16,7 +16,7 @@ clear
 close all
 
 %% number of inputs samples and approximation accuracy
-nSample=50;
+nSample=10;
 nKl=10;
 
 
@@ -68,9 +68,11 @@ theata    = @(h)  alpha.*(theata_s-theata_r)/(alpha+abs(h).^beta)+theata_r;
 theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*abs(h).^(beta-1);
 
 %% Define and Decompose the permeability input field
-lengthcale=lengthZ/10;
+lengthcale=lengthZ*0.1;
 muY=0.0094; 
-DeviationRatio=0.2;     %set DeviationRatio=10 to see dramatic results.
+% DeviationRatio=0.2;     %set DeviationRatio=10 to see dramatic results.
+Deviation=muY*0.2;
+
 %     nKL=100;
 klEnergyKeep=0.90;
 
@@ -79,7 +81,7 @@ klEnergyKeep=0.90;
 %calculate distance matrix
 distance = pdist(Z);
 distanceMatrix = squareform(distance);
-SigmaY=exp(-distanceMatrix./lengthcale) .*(muY*DeviationRatio)^2;      
+SigmaY=exp(-distanceMatrix./lengthcale) .*(Deviation)^2;      
 
 % Conver to X covariance matrix and mean
 SigmaX=log(SigmaY./(muY*muY')+ 1);
@@ -111,10 +113,28 @@ for i=1:nSample
     
     waitbar(i/nSample)
 end
-
+close(h)
 
 
 %% Plot
+ifPlot=1;
+if ifPlot==1
+
+nZShow=100;
+zShow=1:round(nZ/nZShow):nZ;
+figure(2)
+for t=1:1:nTime
+    figure(3)
+    plot(squeeze( hRecord(zShow,t,:)),'-')
+    ylim([-80,20])
+    
+    title(sprintf('time=%i',t))
+%     legend('All KL basis','Truncation KL basis')
+    drawnow
+%     frame(t)=getframe;    %comment to save cpu time and memory
+end
+
+
 % figure(1)
 % plot(cumulatedKlEnergy)
 % hline =line([0,nKl],[klEnergyKeep,klEnergyKeep]);
@@ -138,12 +158,19 @@ end
 % title(sprintf('permeability field'))
 % legend('All KL basis','Truncation KL basis')
 
-
+end
 
 %% Save
-save('data','sample','Ksr','hRecord');
-% load('data')
-
+ifSave=0;
+if ifSave==1
+%     % mkdir('/uesrs/desktop/stgp-Data/')
+    filename='/Users/weix/Desktop/stgp-Data/data';
+%     % [status,msg] = mkdir('/uesrs/desktop/stgp-Data/data1.mat')
+% 
+%     save(filename,'sample','Ksr','hRecord','fomTimeCost');
+    save(filename);
+    % load('data')
+end
 
 
 
