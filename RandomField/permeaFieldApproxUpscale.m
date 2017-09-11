@@ -62,13 +62,15 @@ y=exp(x);
 % end
 
 for i=1:size(klBasis,2)
+%     surface=scatteredInterpolant(coarseLocation,klBasis(:,i),'natural');
+%     surface=scatteredInterpolant(coarseLocation,klBasis(:,i),'nearest');
     surface=scatteredInterpolant(coarseLocation,klBasis(:,i));
     fineKlBasis(:,i)=surface(fineLocation);
 end
 
 % fineMuX=log(muY)-diag(fineKlBasis*klEigenValue*fineKlBasis')./2; %not feasible for high resolution
 
-fineMuX=repmat(muX(1,1),size(fineKlBasis,1),1)    %this is wrong solution
+fineMuX=repmat(muX(1,1),size(fineKlBasis,1),1);    %this is wrong solution
 
 x=fineKlBasis*sqrt(klEigenValue)*sample+repmat(fineMuX,1,nSample);
 
