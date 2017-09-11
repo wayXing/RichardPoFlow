@@ -1,7 +1,7 @@
-function [] = RIchard3d_Demo()
+% function [] = RIchard3d_randomKs_Demo()
 % Richard3d solver demo funtion, Uisng Pircards iteration on Dirichlet and 
 % homogeneous Neumann Boundary condition. The permeability field is
-% heterogeneous.
+% heterogeneous generated using differentmethod.
 %
 % Input parameters:
 %
@@ -11,22 +11,22 @@ function [] = RIchard3d_Demo()
 %
 % See also: 
 % Author:   Wei Xing
-% History:  26/07/2017  Document and modification
+% History:  10/09/2017  Document and modification
 % 
 % Log:
 % Version1.0 initial filed
 
 %% Setup
 % Spatial setup
-lengthZ=10;                 
+lengthZ=20;                 
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
-lengthX=10;
+lengthX=20;
 deltaX=1;
 nX=lengthX/deltaX+1;
 
-lengthY=10;
+lengthY=20;
 deltaY=1;
 nY=lengthY/deltaY+1;
 
@@ -145,46 +145,7 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 iMethod=3;
 switch iMethod
     case 1      %directly give mean and covariance to X. Not recommended for realistic case.
-        
-        scale=0.0094;        % overall magnitude of the permeability field. decide the changing speed.
-        lengthScale=100;      %larger number means less stochastic (more correlation as one zooms in the 
-                            %field) field. Thus gives smoother result.
-        nKl=100;             %number of KL baisi/cofficients
-        [nAllNode,nDimension]=size([Z(:),X(:),Y(:)]);
-        % nKl=nAllNode;
-
-        %calculate distance matrix
-        distance = pdist([Z(:),X(:),Y(:)]);
-        distanceMatrix = squareform(distance);
-
-        %calculate covariance matrix
-        covMatrix=exp(-distanceMatrix./lengthScale);    
-
-        % KL decomposition on covariance matrix via SVD/eigen decomposition
-        [klBasis,klEigenValue,~] = svds(covMatrix,nKl); 
-
-
-        % Generate independent normal samples 
-        seed=100;
-        rng(seed);
-        sample= randn(nKl,1);
-
-        %make multivariate Gaussian distributions with samples. zero mean.
-        %Covariance specified though KL basis.
-        % Ks=klBasis*sqrt(klEigenValue)*sample;
-        % Ks=reshape(Ks,nY,nX);
-        % a log (multi) normal permeability field
-        % Ks=exp(Ks);
-
-        Ks =exp(klBasis*sqrt(klEigenValue)*sample).*scale;
-
-        Ks=reshape(Ks,nZ,nX,nY);
-
-        %Plot 
-        bubbleScale=100;
-        scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
-
-        
+   
     case 2   %Derive mean and covariance of X by given Y. recommended for realistic case.
         
         lengthcale=4;
@@ -204,20 +165,22 @@ switch iMethod
     case 3 %interpolation for high resolution permeability. used for fine grid where permeability generation may fail
         lengthcale=4;
         muY=0.0094; 
-        DeviationRatio=0.4;     %set DeviationRatio=10 to see dramatic results.
+        DeviationRatio=0.2;     %set DeviationRatio=10 to see dramatic results.
         nSample=1;
-        nKL=10;
+        nKL=100;
         
         [coarseZ,coarseX,coarseY] = ndgrid(0:deltaZ*2:lengthZ,0:deltaX*2:lengthX,0:deltaY*2:lengthY); %have to be just fine times
         
-%         Ks=permeaField([Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample);
+%         exactKs=permeaField([Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample);
+        exactKs=permeaFieldApprox([Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample,nKL);
+        exactKs=reshape(exactKs,nZ,nX,nY,[]); 
+        
         Ks=permeaFieldApproxUpscale([coarseZ(:),coarseX(:),coarseY(:)],[Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample,nKL);
-%         Ks=reshape(Ks,nZ,nX,nY,nSample);  
         Ks=reshape(Ks,nZ,nX,nY,[]); 
 %         Ks=reshape(Ks,nZ,nX,nY);
         
-        bubbleScale=100;
-        scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
+%         bubbleScale=100;
+%         scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
         
 end
 
@@ -227,14 +190,24 @@ mesh.H=H_init;       %impose initial condition.
 mesh.Ks=Ks;
 
 tic
-[hRecord,iteration1] = Richard3dPicardSolver(mesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
+[hRecord,iteration] = Richard3dPicardSolver(mesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
 toc
+
+%% MAIN 2
+mesh.H=H_init;       %impose initial condition.
+mesh.Ks=exactKs;
+
+tic
+[exactHRecord,iteration2] = Richard3dPicardSolver(mesh,nTime,deltaT,nMaxIteration,maxIteError,theataDif,K);
+toc
+
+
 
 %% Plotting 
 % H=mesh.H;
 
 figure(1)
-plot(iteration1)
+plot(iteration)
 title(sprintf('Iteration at each time step'))
 
 % end time pressure
@@ -252,8 +225,9 @@ title(sprintf('Iteration at each time step'))
 % axis([nX,nY,nZ ])
 
 % preasure head front surface propogation
-figure(3)
+% figure(3)
 for t=1:nTime
+    figure(1)
     clf
     Ht=abs(hRecord(:,:,:,t));
     p=patch(isosurface(Ht,40));
@@ -269,15 +243,41 @@ for t=1:nTime
     p.EdgeColor = 'none';  
     
     view(-60,40)
-    title(sprintf('pressure front propogation. t=%i',t))
+    title(sprintf('Interpolate pressure front propogation. t=%i',t))
     axis([1,nX,1,nY,1,nZ])
     
     camlight 
     lighting gouraud
-
     
     drawnow
     frame(t)=getframe;
+    
+    %
+    figure(2)
+    clf
+    Ht=abs(exactHRecord(:,:,:,t));
+    p=patch(isosurface(Ht,40));
+    p.FaceColor = 'red';
+    p.EdgeColor = 'none';
+    
+    p=patch(isosurface(Ht,50));
+    p.FaceColor = 'yellow';
+    p.EdgeColor = 'none';  
+
+    p=patch(isosurface(Ht,60));
+    p.FaceColor = 'blue';
+    p.EdgeColor = 'none';  
+    
+    view(-60,40)
+    title(sprintf('Exact pressure front propogation. t=%i',t))
+    axis([1,nX,1,nY,1,nZ])
+    
+    camlight 
+    lighting gouraud
+    
+    drawnow
+    frame(t)=getframe;
+    
 end
 
 xslice = [nX]; 
@@ -288,8 +288,9 @@ slice(mesh.H,nX,1:5:nZ,1)
 
 
 % preasure head propogation in square volume
-figure(4)
+% figure(4)
 for t=1:nTime
+    figure(3)
 %     surf(X(:,:,sliceY),Z(:,:,sliceY),TheataRecord(:,:,sliceY,t))
 %     shading interp;
 %     slice(TheataRecord(:,:,:,t),nX,nY,0:nZ/4:nZ)
@@ -298,6 +299,17 @@ for t=1:nTime
     title(sprintf('pressure. t=%i',t))
     drawnow
     frame(t)=getframe;
+    
+    figure(4)
+%     surf(X(:,:,sliceY),Z(:,:,sliceY),TheataRecord(:,:,sliceY,t))
+%     shading interp;
+%     slice(TheataRecord(:,:,:,t),nX,nY,0:nZ/4:nZ)
+    slice(exactHRecord(:,:,:,t),nX-3,1:5:nZ,1)
+    view(-60,40)
+    title(sprintf('pressure. t=%i',t))
+    drawnow
+    frame(t)=getframe;
+    
 end
 
 % preasure head propogation in sphere volume
