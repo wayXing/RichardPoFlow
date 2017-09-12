@@ -35,6 +35,7 @@ SigmaY=exp(-distanceMatrix./lengthcale) .*(muY*DeviationRatio)^2;
 
 [muY2,SigmaY2]=N2LogN(muX,SigmaX);
 
+%show different of original and map-remap result 
 ErrorMu=sum(muY-muY2)
 ErrorSigma=sum(SigmaY(:)-SigmaY2(:))
 

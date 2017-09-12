@@ -142,7 +142,7 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 
 
 %% Define Permeability field input 
-iMethod=3;
+iMethod=2;
 switch iMethod
     case 1      %directly give mean and covariance to X. Not recommended for realistic case.
         
@@ -202,6 +202,8 @@ switch iMethod
         scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
         
     case 3 %interpolation for high resolution permeability. used for fine grid where permeability generation may fail
+        % WARMING: case 3 is wrong and not working now!!!
+        
         lengthcale=4;
         muY=0.0094; 
         DeviationRatio=0.4;     %set DeviationRatio=10 to see dramatic results.
