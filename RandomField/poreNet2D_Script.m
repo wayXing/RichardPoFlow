@@ -125,4 +125,15 @@ p.XData=X(:,1);
 p.YData=X(:,2);
 
 
+%% After Analysis
+figure(4)
+histfit(poreBody,100,'lognormal') ;
+PoreBody_distribution = fitdist(poreBody,'lognormal')
+
+% logPoreBody_distribution  = fitdist(log(poreBody),'tLocationScale')
+logPoreBody_distribution  = fitdist(log(poreBody),'normal')
+
+
+
+
 
