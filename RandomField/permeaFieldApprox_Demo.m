@@ -2,6 +2,7 @@
 % Author:   Wei Xing
 % History:  25/07/2017  file created
 
+clear; close all
 %% set parameter
 lengthX=40;
 deltaX=4;

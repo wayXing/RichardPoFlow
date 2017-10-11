@@ -11,6 +11,7 @@
 %
 % Author:   Wei Xing
 % History:  10/09/2017  file created
+%           09/10/2017  Modify. Add upsale and test on it 
 
 clear
 
@@ -31,33 +32,49 @@ lengthScale=5;
 Deviation=0.1*muY;
 
 % Kl parameters
-nKl=50;
+nKl=10;
 
 % interpolation parameters
-fineDeltaX=0.1;
+fineDeltaX=0.5;
 fineNX=lengthX/fineDeltaX+1;
-fineDeltaY=0.1;
+fineDeltaY=0.5;
 fineNY=lengthY/fineDeltaY+1;
 fineD=fineNX*fineNY;
 
 
 
-%% Main
-[X,Y] = ndgrid(0:deltaX:lengthX,0:deltaY:lengthY);
-location=[X(:),Y(:)];
+%% Coarse grid 
+[coarseX,coarseY] = ndgrid(0:deltaX:lengthX,0:deltaY:lengthY);
+% [coarseX,coarseY] = meshgrid(0:deltaX:lengthX,0:deltaY:lengthY);
 
-distance = pdist(location);
-distanceMatrix = squareform(distance);
+coarseLocations=[coarseX(:),coarseY(:)];
+
+coarseDistances = pdist(coarseLocations);
+coarseDistanceMatrix = squareform(coarseDistances);
 
 % Calculate covariance matrix of Y
 % MODIFY for richer structure
-coarseSigmaY=exp(-distanceMatrix./lengthScale) .*Deviation^2;    
+coarseSigmaY=exp(-coarseDistanceMatrix./lengthScale) .*Deviation^2;    
 
-[muX,SigmaX]=LogN2N(muY*ones(size(location,1),1),coarseSigmaY);
+[coarseMuX,coarseSigmaX]=LogN2N(muY*ones(size(coarseLocations,1),1),coarseSigmaY);
 
-%% KL on X
+
+%% Fine grid 
+[fineX,fineY] = ndgrid(0:fineDeltaX:lengthX,0:fineDeltaY:lengthY);
+fineLocations=[fineX(:),fineY(:)];
+
+fineDistances = pdist(fineLocations);
+fineDistanceMatrix = squareform(fineDistances);
+
+% Calculate covariance matrix of Y
+% MODIFY for richer structure
+fineSigmaY=exp(-fineDistanceMatrix./lengthScale) .*Deviation^2;    
+
+[fineMuX,fineSigmaX]=LogN2N(muY*ones(size(fineLocations,1),1),fineSigmaY);
+
+%% KL on fine grid
 % nKl=50;
-[klBasisX,klEigenValueX,~] = svds(SigmaX,nKl); 
+[klBasisFineX,klEigenValueFineX,~] = svds(fineSigmaX,nKl); 
 
 energyX=diag(klEigenValueX);
 energyRatioX = cumsum(energyX)./sum(energyX);
@@ -71,28 +88,69 @@ kTemp=cumsum(kTemp,2)+repmat(muX,1,nKl);
 
 K = reshape(exp(kTemp),nX,nY,nKl);
 
+
+%% KL on coarse grid
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 %% Interpolation on basis of coarse grid
 
-[coarseX,coarseY] = ndgrid(0:deltaX*2:lengthX,0:deltaY*2:lengthY); %have to be just fine times
 
-coarseLocation=[coarseX(:),coarseY(:)];
 
-coarseDistance = pdist(coarseLocation);
-CoarseDistanceMatrix = squareform(coarseDistance);
+
+
+
+% [coarseX,coarseY] = ndgrid(0:deltaX:lengthX,0:deltaY:lengthY); %have to be just fine times
+
+% coarseLocation=[coarseX(:),coarseY(:)];
+
+% coarseDistances = pdist(coarseLocation);
+% CoarseDistanceMatrix = squareform(coarseDistances);
 
 % Calculate covariance matrix of Y
 % MODIFY for richer structure
-coarseSigmaY=exp(-CoarseDistanceMatrix./lengthScale) .*Deviation^2;    
+% coarseSigmaY=exp(-CoarseDistanceMatrix./lengthScale) .*Deviation^2;    
 
-[coarseMuX,coarseSigmaX]=LogN2N(muY*ones(size(coarseLocation,1),1),coarseSigmaY);
+% [coarseMuX,coarseSigmaX]=LogN2N(muY*ones(size(coarseLocation,1),1),coarseSigmaY);
 [coarseKlBasis,coarseklEigenValue,~] = svds(coarseSigmaX,nKl); 
 
-for i=1:nKl
-%     surface=scatteredInterpolant(coarseLocation,klBasis(:,i),'natural');
-%     surface=scatteredInterpolant(coarseLocation,klBasis(:,i),'nearest');
-    surface=scatteredInterpolant(coarseLocation,coarseKlBasis(:,i));
-    interpolatedKlBasis(:,i)=surface(location);
+iMethod=2;
+switch iMethod 
+    case 1
+        for i=1:nKl
+        %     surface=scatteredInterpolant(coarseLocation,klBasis(:,i),'natural');
+        %     surface=scatteredInterpolant(coarseLocation,klBasis(:,i),'nearest');
+            surface=scatteredInterpolant(coarseLocation,coarseKlBasis(:,i));
+            interpolatedKlBasis(:,i)=surface(coarseLocations);
+        end
+
+    case 2
+        for i=1:nKl
+            iCoarseKlBasisField = reshape(coarseKlBasis(:,i),nX,nY);
+%             iInterpolatedKlBasisField = interp2(coarseLocation(:,1),coarseLocation(:,2),iCoarseKlBasisField,...
+%                                                 location(:,1),location(:,2));
+                                            
+            iInterpolatedKlBasisField = interp2(coarseX,coarseY,iCoarseKlBasisField,...
+                                                fineX,fineY,'spline');
+                                            
+            interpolatedKlBasis(:,i)= iInterpolatedKlBasisField(:);                               
+        end
+        
 end
+
+
+
 
 
 % interpolatedMuX=log(muY)-diag(fineKlBasis*klEigenValue*fineKlBasis')./2; %not feasible for high resolution
@@ -130,7 +188,7 @@ title(sprintf('Eigen function compare'))
 
 
 figure(2)
-pcolor(X,Y,K(:,:,end))
+pcolor(coarseX,coarseY,K(:,:,end))
 shading interp;
 colormap jet;
 colorbar
@@ -140,14 +198,14 @@ title(sprintf('True field'))
 for i=1:1:nKl
     figure(3)
     subplot(1,2,1)
-    pcolor(X,Y,K(:,:,i))
+    pcolor(coarseX,coarseY,K(:,:,i))
     shading interp;
     colormap jet;
     colorbar
     title(sprintf('nKL=%d, energy=%f',i,energyRatioX(i)))
     
     subplot(1,2,2)
-    pcolor(X,Y,interpolatedK(:,:,i))
+    pcolor(coarseX,coarseY,interpolatedK(:,:,i))
     shading interp;
     colormap jet;
     colorbar

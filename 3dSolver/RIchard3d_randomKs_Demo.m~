@@ -219,16 +219,12 @@ switch iMethod
                                                 grid2X,grid2Y,grid2Z,'cubic');                                            
         end
         
-        MuXGrid1 = reshape(MuX1,[size(grid1X)]);           
-        interpMuXGrid2 = interp3(grid1X,grid1Y,grid1Z,MuXGrid1,...
-                                            grid2X,grid2Y,grid2Z,'cubic');        
-        
         %sample from normal distribution
         Theata= randn(nKl,nSample);
         
         %form Y2
-%         X2=zeros([size(grid2X),nSample])*interpMuXGrid2;
-        X2=repmat(interpMuXGrid2,1,nSample);
+        X2=zeros([size(grid2X),nSample]);
+
         
         for i=1:nSample
             for j=1:nKl
@@ -253,8 +249,9 @@ switch iMethod
 
         %Plot 
         bubbleScale=100;
-%         scatter3(grid2X(:),grid2Y(:),grid2Z(:),KsMeshGrid(:)*bubbleScale,KsMeshGrid(:)*bubbleScale)
+        scatter3(grid2X(:),grid2Y(:),grid2Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
         scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
+        scatter3(grid2X(:),grid2Y(:),grid2Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
         
         
         

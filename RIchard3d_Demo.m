@@ -142,7 +142,7 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 
 
 %% Define Permeability field input 
-iMethod=2;
+iMethod=4;
 switch iMethod
     case 1      %directly give mean and covariance to X. Not recommended for realistic case.
         
@@ -221,6 +221,9 @@ switch iMethod
         bubbleScale=100;
         scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
         
+    case 4      %Homogenous Ks
+        muY=0.0094; 
+        Ks=repmat(muY,nZ,nX,nY); 
 end
 
 

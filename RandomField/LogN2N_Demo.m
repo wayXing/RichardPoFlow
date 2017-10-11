@@ -1,7 +1,8 @@
-function []=LogN2N_Demo
+% function []=LogN2N_Demo
 % Test LogN2N and N2LogN function with a 2D random field whose covariance
 % is isometric
 
+clear
 
 %% set parameter
 lengthX=40;

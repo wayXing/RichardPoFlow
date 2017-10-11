@@ -121,7 +121,7 @@ scale=0.05;        % overall magnitude of the permeability field. decide the cha
 lengthScale=100;      %larger number means less stochastic (more correlation as one zooms in the 
                     %field) field. Thus gives smoother result.
 nKl=50;             %number of KL baisi/cofficients
-                                      
+
 [nAllNode,nDimension]=size([Z(:),X(:),Y(:)]);
 % nKl=nAllNode;
 
@@ -157,6 +157,10 @@ bubbleScale=100;
 scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
 
 
+%         %Homogenous Ks
+%         muY=0.0094; 
+%         Ks=repmat(muY,nZ,nX,nY); 
+
 %% Initilize mesh 
 mesh.deltaZ=deltaZ;
 mesh.nZ=nZ;
@@ -173,7 +177,7 @@ mesh.H=H_init;      %impose initial condition.
 %% MAIN
 % nNode=length(nodeIndex(nodeIndex~=0));
 % H=H_init;       %impose initial condition.
-
+h=waitbar(0,'On progress');
 tic
 for t=1:nTime
     H_PreviousTime= mesh.H;
@@ -201,9 +205,10 @@ for t=1:nTime
     end
     
     hRecord(:,:,:,t)=mesh.H;
-
+    waitbar(t/nTime)
 end
 toc
+close(h)
 
 %% Plotting 
 % H=mesh.H;
