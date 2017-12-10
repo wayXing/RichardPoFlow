@@ -28,7 +28,7 @@ function fineY=permeaFieldApproxUpscale(coarseLocation,fineLocation,lengthcale,m
 %% Initial 
 seed=101;
 %
-%% Main
+%% A normal KL process
 %calculate distance matrix
 distance = pdist(coarseLocation);
 distanceMatrix = squareform(distance);
@@ -43,16 +43,18 @@ muX=log(muY)-diag(SigmaX)./2;
 
 
 % KL decomposition of X; Normalization of X;
-[klBasis,klEigenValue,~] = svds(SigmaX,nKL); 
+[eigenVec,eigenval,~] = svds(SigmaX,nKL); 
 
 %Generate independent normal samples 
 % rng(seed);  %pseudo random
 
 sample= randn(nKL,nSample);
-x=klBasis*sqrt(klEigenValue)*sample+repmat(muX,1,nSample);
+x=eigenVec*sqrt(eigenval)*sample+repmat(muX,1,nSample);
 
 % a multi-variate log (multi) normal permeability field
 y=exp(x);
+
+klBasis=eigenVec*sqrt(eigenval);
 
 
 %% basis interpolation
@@ -70,9 +72,11 @@ end
 
 % fineMuX=log(muY)-diag(fineKlBasis*klEigenValue*fineKlBasis')./2; %not feasible for high resolution
 
-fineMuX=repmat(muX(1,1),size(fineKlBasis,1),1);    %this is wrong solution
+fineMuX=repmat(muX(1,1),size(fineKlBasis,1),1);    %TODO: this is wrong solution. Only valid when mu=0;
 
-x=fineKlBasis*sqrt(klEigenValue)*sample+repmat(fineMuX,1,nSample);
+% x=eigenVec*sqrt(eigenval)*sample+repmat(fineMuX,1,nSample);
+
+x=fineKlBasis*sample+repmat(fineMuX,1,nSample);
 
 fineY=exp(x);
 

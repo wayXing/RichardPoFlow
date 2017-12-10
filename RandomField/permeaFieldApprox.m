@@ -1,4 +1,4 @@
-function y=permeaFieldApprox(location,lengthcale,muY,DeviationRatio,nSample,nKL)
+function y=permeaFieldApprox(location,lengthScale,muY,DeviationRatio,nSample,nKL)
 % permeability field approximation generator (log-normal) given coordinates by Grid and measure lengthscale.
 %
 % Equation:
@@ -33,8 +33,8 @@ distance = pdist(location);
 distanceMatrix = squareform(distance);
 
 % Calculate covariance matrix of Y
-% MODIFY for richer structure
-SigmaY=exp(-distanceMatrix./lengthcale) .*(muY*DeviationRatio)^2;      
+% TODO: MODIFY for richer structure
+SigmaY=exp(-distanceMatrix./lengthScale) .*(muY*DeviationRatio)^2;      
 
 
 % Conver to X covariance matrix and mean

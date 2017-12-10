@@ -14,19 +14,22 @@
 % History:  10/09/2017  Document and modification
 % 
 % Log:
-% Version1.0 initial filed
+% Version1.0: initial filed 10/09/2017 
+% Update:     ad add fine resolution random filed interpolation 12/09/2017
+
+clear
 
 %% Setup
 % Spatial setup
-lengthZ=20;                 
+lengthZ=10;                 
 deltaZ=1;
 nZ=lengthZ/deltaZ+1;
 
-lengthX=20;
+lengthX=10;
 deltaX=1;
 nX=lengthX/deltaX+1;
 
-lengthY=20;
+lengthY=10;
 deltaY=1;
 nY=lengthY/deltaY+1;
 
@@ -142,20 +145,23 @@ theataDif = @(h) -alpha.*(theata_s-theata_r).*-1.*(alpha+abs(h).^beta).^(-2).*ab
 
 
 %% Define Permeability field input 
-iMethod=2;
+iMethod=3;
 switch iMethod
     case 1      %directly give mean and covariance to X. Not recommended for realistic case.
    
     case 2   %Derive mean and covariance of X by given Y. recommended for realistic case.
         
-        lengthcale=4;
+        lengthScale=10;
         muY=0.0094; 
-        DeviationRatio=0.4;     %set DeviationRatio=10 to see dramatic results.
+        DeviationRatio=0.2;     %set DeviationRatio=10 to see dramatic results.
         nSample=1;
-        nKL=100;
+        nKL=500;
         
 %         Ks=permeaField([Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample);
-        Ks=permeaFieldApprox([Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample,nKL);
+        exactKs=permeaFieldApprox([Z(:),X(:),Y(:)],lengthScale,muY,DeviationRatio,nSample,nZ*nX*nY);
+        exactKs=reshape(exactKs,nZ,nX,nY,[]); 
+        
+        Ks=permeaFieldApprox([Z(:),X(:),Y(:)],lengthScale,muY,DeviationRatio,nSample,nKL);
         Ks=reshape(Ks,nZ,nX,nY,nSample);   
         
         %Plot 
@@ -163,9 +169,10 @@ switch iMethod
         scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
         
     case 3 %interpolation for high resolution permeability. used for fine grid where permeability generation may fail
-        % WARMING: case 3 is wrong and not working now!!!
+        % WARMING: Ks exactKs might (very likely) significantly different due to the
+        % conflict of eigenvector direction. But please jsut the results.:)
         
-        lengthcale=4;
+        lengthScale=1;
         muY=0.0094; 
         DeviationRatio=0.2;     %set DeviationRatio=10 to see dramatic results.
         nSample=1;
@@ -173,16 +180,16 @@ switch iMethod
         
         [coarseZ,coarseX,coarseY] = ndgrid(0:deltaZ*2:lengthZ,0:deltaX*2:lengthX,0:deltaY*2:lengthY); %have to be just fine times
         
-%         exactKs=permeaField([Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample);
-        exactKs=permeaFieldApprox([Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample,nKL);
+        exactKs=permeaFieldApprox([Z(:),X(:),Y(:)],lengthScale,muY,DeviationRatio,nSample,nKL);  %impossible due to memory required.
         exactKs=reshape(exactKs,nZ,nX,nY,[]); 
-        
-        Ks=permeaFieldApproxUpscale([coarseZ(:),coarseX(:),coarseY(:)],[Z(:),X(:),Y(:)],lengthcale,muY,DeviationRatio,nSample,nKL);
+
+        Ks=permeaFieldApproxUpscale([coarseZ(:),coarseX(:),coarseY(:)],[Z(:),X(:),Y(:)],lengthScale,muY,DeviationRatio,nSample,nKL);
         Ks=reshape(Ks,nZ,nX,nY,[]); 
 %         Ks=reshape(Ks,nZ,nX,nY);
         
 %         bubbleScale=100;
 %         scatter3(X(:),Y(:),Z(:),Ks(:)*bubbleScale,Ks(:)*bubbleScale)
+
         
 end
 
